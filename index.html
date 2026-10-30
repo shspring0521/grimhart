@@ -314,7 +314,7 @@
   }
   #mobileEditor.show{ display:block; }
   .me-ground{ position:absolute; left:0; right:0; top:450px; bottom:0; background:linear-gradient(#201d1c,#0d0c0b); border-top:1px solid rgba(216,180,99,0.25); }
-  .me-hint{ position:absolute; left:0; right:0; top:238px; text-align:center; font-size:13px; color:rgba(216,180,99,0.45); letter-spacing:3px; }
+  .me-hint{ position:absolute; left:0; right:0; top:268px; text-align:center; font-size:13px; color:rgba(216,180,99,0.45); letter-spacing:3px; }
   .me-panel{
     position:absolute; left:50%; top:10px; transform:translateX(-50%); width:610px;
     background:rgba(16,10,16,0.94); border:1px solid rgba(216,180,99,0.4);
@@ -326,6 +326,9 @@
   .me-row{ display:flex; align-items:center; gap:12px; margin:6px 0; font-size:13px; }
   .me-row label{ width:84px; color:var(--text-dim); flex:none; }
   .me-row .seg .btn{ padding:7px 10px; }
+  #meSjOn, #meSjOff{ width:56px; }
+  .me-tip{ font-size:11px; color:var(--text-dim); letter-spacing:0; }
+  #meStickJumpRow[hidden]{ display:none; }
   .me-sel{ color:#fff; letter-spacing:1px; }
   .me-row input[type=range]{ flex:1; accent-color:#d8b463; height:22px; }
   .me-val{ width:46px; text-align:right; color:var(--gold); flex:none; }
@@ -483,6 +486,10 @@
         <div class="me-row"><label>투명도</label><input type="range" id="meOp" step="1"><span class="me-val" id="meOpVal">50%</span></div>
         <div class="me-row"><label>이동 방식</label>
           <div class="seg"><button class="btn small" id="meJoy">조이스틱</button><button class="btn small" id="meJoyJump">조이스틱 + 점프 버튼</button><button class="btn small" id="meDpad">십자키 (베드락식)</button></div>
+        </div>
+        <div class="me-row" id="meStickJumpRow"><label>조이스틱 점프</label>
+          <div class="seg"><button class="btn small" id="meSjOn">ON</button><button class="btn small" id="meSjOff">OFF</button></div>
+          <span class="me-tip">ON: 조이스틱 위로 + 점프 버튼 둘 다 점프 · OFF: 점프 버튼으로만</span>
         </div>
         <div class="me-actions">
           <button class="btn small" id="meReset">기본 세팅</button>
@@ -852,8 +859,8 @@
     vy: 0, grounded: true, onPlatform: false,
     facing: 1,
     speed: 250,
-    hp: 150, maxHp: 150,
-    stamina: 100, maxStamina: 100,
+    hp: 300, maxHp: 300,
+    stamina: 150, maxStamina: 150,
     state: 'idle', // idle, run, attack, dodge, hurt, grabbed, thrown, dead
     stateTime: 0,
     attackCooldown: 0,
@@ -1077,7 +1084,7 @@
   }
 
   function resetGame(){
-    player.hp=150; player.stamina=100; player.state='idle'; player.stateTime=0;
+    player.hp=player.maxHp; player.stamina=player.maxStamina; player.state='idle'; player.stateTime=0;
     player.attackCooldown=0; player.cdJ=0; player.cdK=0; player.invuln=0; player.vy=0; player.grounded=true; player.onPlatform=false;
     player.thrustRecover=-1;
     particles=[]; floatTexts=[];
@@ -2047,7 +2054,7 @@
   const P1_SHOCK_STUN = 0.5, P1_SHOCK_KNOCK = 230;
 
   // ---- 2페이즈 ----
-  const P2_HP = 800;
+  const P2_HP = 700;
   const DEATH_FALL = 0.8, DEATH_RED = 1.3, DEATH_GONE = 2.9;   // 처치 연출: 쓰러짐 → 붉게 → 가루
   const P2_W = 50, P2_H = 81;                              // 플레이어 키의 1.5배
   const P2_SPEED = 1.3;                                    // 1페이즈보다 30% 빠르다
@@ -3989,18 +3996,34 @@
       drawDangerRect({x:B_L, y:0, w:B_INNER, h:GROUND_Y+4}, p*0.55);
     }
     else if(st==='storm_tele'){
+      // 검기는 진행 방향에 수직인 길이 P2_STORM_LEN의 선분 + 두께 P2_STORM_R 이므로,
+      // 실제로 쓸고 지나가는 띠의 폭은 LEN + 2R. 예고도 정확히 그 폭으로 칠한다.
       const o = boss._origin, p = clamp(t/P2_STORM_TELE,0,1);
+      const ox = o.x-camera.x, oy = o.y;
+      const half = P2_STORM_LEN/2 + P2_STORM_R, back = P2_STORM_R, D = 1100;
       ctx.save();
       ctx.beginPath(); ctx.rect(B_L-camera.x, 0, B_INNER, GROUND_Y+2); ctx.clip();
-      ctx.strokeStyle = 'rgba('+DANGER_COLOR+','+(0.25+0.55*p)+')';
-      ctx.lineWidth = P2_STORM_R*2*(0.4+0.6*p);
-      ctx.lineCap = 'round';
+      ctx.beginPath();
       for(const a of boss._angs){
-        ctx.beginPath();
-        ctx.moveTo(o.x-camera.x, o.y);
-        ctx.lineTo(o.x-camera.x+Math.cos(a)*1000, o.y+Math.sin(a)*1000);
-        ctx.stroke();
+        const c = Math.cos(a), sn = Math.sin(a), px = -sn*half, py = c*half;
+        const bx = ox - c*back, by = oy - sn*back;
+        ctx.moveTo(bx+px, by+py);
+        ctx.lineTo(ox+c*D+px, oy+sn*D+py);
+        ctx.lineTo(ox+c*D-px, oy+sn*D-py);
+        ctx.lineTo(bx-px, by-py);
+        ctx.closePath();
       }
+      ctx.fillStyle = 'rgba('+DANGER_COLOR+','+(0.10+0.22*p)+')';
+      ctx.fill('nonzero');
+      // 진행 방향 표시선
+      ctx.strokeStyle = 'rgba('+DANGER_COLOR+','+(0.35+0.5*p)+')';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for(const a of boss._angs){
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(ox+Math.cos(a)*D, oy+Math.sin(a)*D);
+      }
+      ctx.stroke();
       ctx.restore();
     }
     else if(st==='dive_track' || st==='dive_fall'){
@@ -4712,6 +4735,7 @@
   function mcDefaults(){
     return {
       mobile:false, moveType:'joystick', transparency:50,
+      stickJump:false,   // 조이스틱 + 점프 버튼 모드에서 조이스틱으로도 점프할지
       buttons:{
         move:  {x:120, y:395, size:50},
         attack:{x:745, y:400, size:50},
@@ -4731,6 +4755,7 @@
         const s = JSON.parse(raw);
         if(typeof s.mobile==='boolean') d.mobile = s.mobile;
         if(MC_MOVE_TYPES.includes(s.moveType)) d.moveType = s.moveType;
+        if(typeof s.stickJump==='boolean') d.stickJump = s.stickJump;
         if(isFinite(s.transparency)) d.transparency = clamp(+s.transparency, 0, MC_TRANSP_MAX);
         if(s.buttons){
           for(const id of MC_IDS){
@@ -4794,6 +4819,8 @@
   }
   const MC_ARROW = '<svg viewBox="0 0 24 24"><path d="M12 4 L21 16 H3 Z" fill="#fff"/></svg>';
 
+  // 조이스틱을 위로 밀면 점프하는가
+  function mcStickJumps(){ return mcCur.moveType==='joystick' || (mcCur.moveType==='joyjump' && mcCur.stickJump); }
   function mcSizePx(id){ return Math.max(MC_MIN_PX, MC_BASE[id]*mcCur.buttons[id].size/50); }
   function mcVisibleIds(){ return MC_IDS.filter(id => id!=='jump' || mcCur.moveType==='joyjump'); }
 
@@ -4814,7 +4841,7 @@
         } else {
           el.classList.add('mc-joy');
           // 손가락이 바깥 고리를 살짝 벗어나도 잡히도록 보이지 않는 넓은 터치 영역을 둔다
-          el.innerHTML = '<div class="mc-hit"></div>' + mcJoySvg(mcCur.moveType==='joystick') + '<div class="knob"></div>';
+          el.innerHTML = '<div class="mc-hit"></div>' + mcJoySvg(mcStickJumps()) + '<div class="knob"></div>';
         }
       } else {
         el.classList.add('mc-btn');
@@ -4851,16 +4878,18 @@
   }
 
   // ---- 입력 ----
-  const mcHeld = new Set();            // 모바일 버튼이 누르고 있는 키
+  const mcHeld = new Map();            // 모바일 버튼이 누르고 있는 키 -> 누르고 있는 버튼 수
   const mcMove = {left:false, right:false, up:false, down:false};
   const mcActive = {};                 // 버튼 id -> 그 버튼을 누르고 있는 손가락(pointerId)
   const mcDrag = {};                   // 설정 화면에서 끌고 있는 버튼 정보
   function mcSetKey(code, down){
+    const n = mcHeld.get(code) || 0;
     if(down){
       if(!keys[code]) pressed[code] = true;
-      keys[code] = true; mcHeld.add(code);
-    } else if(mcHeld.has(code)){
-      keys[code] = false; mcHeld.delete(code);
+      keys[code] = true; mcHeld.set(code, n+1);
+    } else if(n > 0){
+      if(n === 1){ keys[code] = false; mcHeld.delete(code); }
+      else mcHeld.set(code, n-1);
     }
   }
   function mcSetMove(l, r, u, d){
@@ -4876,7 +4905,7 @@
     for(const id in mcActive) delete mcActive[id];
     for(const id in mcDrag) delete mcDrag[id];
     mcSetMove(false,false,false,false);
-    for(const code of Array.from(mcHeld)) mcSetKey(code, false);
+    for(const code of Array.from(mcHeld.keys())){ keys[code] = false; mcHeld.delete(code); }
     for(const id in mcEls){
       const e = mcEls[id];
       e.el.classList.remove('down','active');
@@ -4907,8 +4936,7 @@
       e.knob.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)';
       const nx = dx/maxR, ny = dy/maxR;
       // 좌우 이동 / 위로 밀면 점프 (점프 버튼 방식에선 없음) / 아래로 밀면 발판 하강
-      const jumpByStick = mcCur.moveType==='joystick';
-      mcSetMove(nx < -0.3, nx > 0.3, jumpByStick && ny < -0.6, ny > 0.65);
+      mcSetMove(nx < -0.3, nx > 0.3, mcStickJumps() && ny < -0.6, ny > 0.65);
     }
   }
 
@@ -5123,6 +5151,7 @@
     } else {
       rows += ctlRow(moveName+' 좌우', '이동', '');
       if(t==='joystick') rows += ctlRow(moveName+' 위로', '점프', '');
+      else if(mcSaved.stickJump) rows += ctlRow('점프 버튼 / '+moveName+' 위로', '점프', '둘 다 점프할 수 있다');
       else rows += ctlRow('점프 버튼', '점프', '공격 버튼 오른쪽 위');
       rows += ctlRow(moveName+' 아래로', '발판 하강', '발판 위에서 아래로 내려간다');
     }
@@ -5161,7 +5190,7 @@
     }
     if(!show) return;
     // 누르고 있는 버튼의 키는 매 프레임 다시 눌린 상태로 맞춘다 (어디선가 풀려도 이동이 끊기지 않도록)
-    for(const code of mcHeld) keys[code] = true;
+    for(const code of mcHeld.keys()) keys[code] = true;
     if(mcEditing){
       for(const id of ['j','k']) mcCool(id, 0, 1, -1);
       if(mcEls.dash) mcEls.dash.el.classList.remove('nostam');
@@ -5212,6 +5241,8 @@
     joyjump: document.getElementById('meJoyJump'),
     dpad: document.getElementById('meDpad'),
   };
+  const meSjRow = document.getElementById('meStickJumpRow');
+  const meSjOn = document.getElementById('meSjOn'), meSjOff = document.getElementById('meSjOff');
   const meReset = document.getElementById('meReset'), meUndoBtn = document.getElementById('meUndo');
   const meSave = document.getElementById('meSave'), meBack = document.getElementById('meBack');
   const meStatus = document.getElementById('meStatus');
@@ -5219,8 +5250,8 @@
   meOp.min = 0; meOp.max = MC_TRANSP_MAX;
 
   function mcDirty(){
-    return JSON.stringify([mcCur.buttons, mcCur.transparency, mcCur.moveType]) !==
-           JSON.stringify([mcSaved.buttons, mcSaved.transparency, mcSaved.moveType]);
+    return JSON.stringify([mcCur.buttons, mcCur.transparency, mcCur.moveType, mcCur.stickJump]) !==
+           JSON.stringify([mcSaved.buttons, mcSaved.transparency, mcSaved.moveType, mcSaved.stickJump]);
   }
   function mcSync(){
     if(!mcEditing){ mcApplyLayout(); return; }
@@ -5230,6 +5261,9 @@
     meOp.value = mcCur.transparency;
     meOpVal.textContent = Math.round(mcCur.transparency)+'%';
     for(const t in meMoveBtns) meMoveBtns[t].classList.toggle('on', mcCur.moveType===t);
+    meSjRow.hidden = mcCur.moveType!=='joyjump';
+    meSjOn.classList.toggle('on', !!mcCur.stickJump);
+    meSjOff.classList.toggle('on', !mcCur.stickJump);
     meUndoBtn.disabled = mcUndo.length===0;
     meSave.disabled = !mcDirty();
     if(mcDirty()) meStatus.textContent = '';
@@ -5280,11 +5314,19 @@
     mcBuild(); mcSync();
   }
   for(const t in meMoveBtns) meMoveBtns[t].addEventListener('click', ()=>meSetMoveType(t));
+  function meSetStickJump(on){
+    if(!!mcCur.stickJump===on) return;
+    mcPushUndo();
+    mcCur.stickJump = on;
+    mcBuild(); mcSync();
+  }
+  meSjOn.addEventListener('click', ()=>meSetStickJump(true));
+  meSjOff.addEventListener('click', ()=>meSetStickJump(false));
 
   meReset.addEventListener('click', ()=>{
     const d = mcDefaults();
-    const next = {buttons:d.buttons, transparency:d.transparency, moveType:d.moveType};
-    if(JSON.stringify(next)===JSON.stringify({buttons:mcCur.buttons, transparency:mcCur.transparency, moveType:mcCur.moveType})) return;
+    const next = {buttons:d.buttons, transparency:d.transparency, moveType:d.moveType, stickJump:d.stickJump};
+    if(JSON.stringify(next)===JSON.stringify({buttons:mcCur.buttons, transparency:mcCur.transparency, moveType:mcCur.moveType, stickJump:!!mcCur.stickJump})) return;
     mcPushUndo();
     Object.assign(mcCur, mcClone(next));
     mcBuild(); mcSync();
