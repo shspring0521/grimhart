@@ -325,23 +325,34 @@
   .me-status{ font-size:12px; color:#9be09f; letter-spacing:1px; }
   .me-row{ display:flex; align-items:center; gap:12px; margin:6px 0; font-size:13px; }
   .me-row label{ width:84px; color:var(--text-dim); flex:none; }
+  .me-row .seg .btn{ padding:7px 10px; }
   .me-sel{ color:#fff; letter-spacing:1px; }
   .me-row input[type=range]{ flex:1; accent-color:#d8b463; height:22px; }
   .me-val{ width:46px; text-align:right; color:var(--gold); flex:none; }
   .me-actions{ display:flex; gap:8px; justify-content:center; margin-top:10px; }
   .me-actions .btn{ flex:1; }
 
-  /* 재시작 버튼 (모바일 조작 O, 플레이 중에만) */
-  #mcRestart{
+  /* 일시정지 화면: 게임 화면이 비쳐 보이도록 반투명 */
+  .start-overlay.pause-mode{ background:rgba(6,4,8,0.82); }
+  .ctl-tabs{ margin:-8px 0 14px 0; }
+  .ctl-tabs .btn{ width:96px; }
+  .controls-table[hidden]{ display:none; }
+  .controls-table td{ padding:6px 12px; }
+  #ctlMob td:first-child{ color:var(--gold); white-space:nowrap; }
+  .mc-hit{ position:absolute; inset:-30%; border-radius:50%; }
+  .mc-dpad .mc-hit{ inset:-14%; border-radius:18%; }
+
+  /* 일시정지 버튼 (모바일 조작 O, 플레이 중에만) */
+  #mcPause{
     position:absolute; right:5px; top:4px; width:28px; height:28px; z-index:6; display:none;
     border-radius:50%; pointer-events:auto; touch-action:none; cursor:pointer;
     background:radial-gradient(circle at 50% 35%, rgba(70,52,58,0.95), rgba(14,10,14,0.95) 72%);
     border:1.5px solid rgba(216,180,99,0.75); box-shadow:0 2px 6px rgba(0,0,0,0.6);
     align-items:center; justify-content:center; opacity:var(--op,0.5);
   }
-  #mcRestart.show{ display:flex; }
-  #mcRestart.down{ transform:scale(0.9); filter:brightness(1.4); }
-  #mcRestart svg{ width:62%; height:62%; pointer-events:none; }
+  #mcPause.show{ display:flex; }
+  #mcPause.down{ transform:scale(0.9); filter:brightness(1.4); }
+  #mcPause svg{ width:58%; height:58%; pointer-events:none; }
 
   /* 세로 화면 안내 */
   #rotateHint{
@@ -386,7 +397,7 @@
 
     <!-- 모바일 조작 버튼 (모바일 조작 O일 때만 표시) -->
     <div id="mobileControls"></div>
-    <div id="mcRestart" title="재시작"><svg viewBox="0 0 24 24" fill="none" stroke="#efe6d8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19.5 4v4.5H15"/></svg></div>
+    <div id="mcPause" title="일시정지"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="#efe6d8"/><rect x="14" y="5" width="4" height="14" rx="1" fill="#efe6d8"/></svg></div>
 
     <div class="phase-banner" id="phaseBanner">광기 각성!</div>
 
@@ -409,10 +420,26 @@
         </div>
       </div>
 
+      <!-- 일시정지 화면 -->
+      <div class="screen" id="pauseScreen" hidden>
+        <h2 class="controls-title">일시정지</h2>
+        <div class="menu-buttons">
+          <button class="btn" id="pResumeBtn">계속하기</button>
+          <button class="btn" id="pControlsBtn">조작법</button>
+          <button class="btn" id="pKeyBtn">조작 키 편집</button>
+          <button class="btn" id="pRetryBtn">다시하기</button>
+          <button class="btn" id="pTitleBtn">처음 화면</button>
+        </div>
+      </div>
+
       <!-- 조작법 화면 -->
       <div class="screen" id="controlsScreen" hidden>
         <h2 class="controls-title">조작법</h2>
-        <table class="controls-table">
+        <div class="seg ctl-tabs">
+          <button class="btn small" id="ctlTabPc">PC</button>
+          <button class="btn small" id="ctlTabMob">모바일</button>
+        </div>
+        <table class="controls-table" id="ctlPc">
           <tr><td><span class="key">A</span> <span class="key">D</span></td><td>이동</td><td class="desc"></td></tr>
           <tr><td><span class="key">Space</span></td><td>점프</td><td class="desc"></td></tr>
           <tr><td><span class="key">S</span></td><td>발판 하강</td><td class="desc">발판 위에서 아래로 내려간다</td></tr>
@@ -420,9 +447,10 @@
           <tr><td><span class="key">J</span></td><td>찌르기</td><td class="desc">1초간 누르고 있으면 강찌르기 · 평타/다른 스킬을 끊고 발동 · 쿨타임 1초</td></tr>
           <tr><td><span class="key">K</span></td><td>3단 베기</td><td class="desc">한 번 누르면 3연타 · 적의 공격을 끊는다 · 평타/다른 스킬을 끊고 발동 · 쿨타임 5초</td></tr>
           <tr><td><span class="key">Shift</span></td><td>회피 구르기</td><td class="desc">기력 소모 · 잠시 무적</td></tr>
+          <tr><td><span class="key">Esc</span></td><td>일시정지</td><td class="desc">계속하기 · 조작법 · 조작 키 편집 · 다시하기 · 처음 화면</td></tr>
           <tr><td><span class="key">R</span></td><td>재시작</td><td class="desc"></td></tr>
         </table>
-        <div class="controls-note">모바일: 이동키를 위로 밀면 점프 · 아래로 밀면 발판 하강 · 오른쪽 아래 버튼으로 공격 / 회피 / J / K</div>
+        <table class="controls-table" id="ctlMob" hidden></table>
         <button class="btn" id="backBtn">돌아가기</button>
       </div>
 
@@ -454,7 +482,7 @@
         <div class="me-row"><label>크기</label><input type="range" id="meSize" step="1"><span class="me-val" id="meSizeVal">50%</span></div>
         <div class="me-row"><label>투명도</label><input type="range" id="meOp" step="1"><span class="me-val" id="meOpVal">50%</span></div>
         <div class="me-row"><label>이동 방식</label>
-          <div class="seg"><button class="btn small" id="meJoy">조이스틱</button><button class="btn small" id="meDpad">십자키 (베드락식)</button></div>
+          <div class="seg"><button class="btn small" id="meJoy">조이스틱</button><button class="btn small" id="meJoyJump">조이스틱 + 점프 버튼</button><button class="btn small" id="meDpad">십자키 (베드락식)</button></div>
         </div>
         <div class="me-actions">
           <button class="btn small" id="meReset">기본 세팅</button>
@@ -549,12 +577,14 @@
   const THRUST_COOLDOWN = 1.0;   // J 쿨타임 (찌르기가 나가는 순간부터)
   const COMBO_COOLDOWN = 5.0;    // K 쿨타임 (1타가 나가는 순간부터)
   const COMBO_BOSS_STAGGER = 0.3; // K가 보스에게 맞을 때마다 주는 경직 시간
-  // K: 3단 베기 - 1, 2타는 빠르게, 3타는 힘을 모아 크게 벤다
+  // 평타 사거리 (기존 54의 2배)
+  const PLAYER_ATTACK_REACH = 108;
+  // K: 3단 베기 - 1, 2타는 빠르게, 3타는 힘을 모아 크게 벤다 (사거리: 1·2타 기존의 2배, 3타 2.5배)
   const COMBO_STEPS = [
     null,
-    {dur:0.22, hitStart:0.05, hitEnd:0.13, reach:54, dmg:8},
-    {dur:0.22, hitStart:0.05, hitEnd:0.13, reach:54, dmg:8},
-    {dur:0.62, windup:0.32, hitStart:0.32, hitEnd:0.42, reach:68, dmg:25, lunge:24},
+    {dur:0.22, hitStart:0.05, hitEnd:0.13, reach:108, dmg:8},
+    {dur:0.22, hitStart:0.05, hitEnd:0.13, reach:108, dmg:8},
+    {dur:0.62, windup:0.32, hitStart:0.32, hitEnd:0.42, reach:170, dmg:25, lunge:24},
   ];
 
   // 보스에게 가는 길 - 스컬 / 컵헤드 / 카타나 제로식 구성.
@@ -713,7 +743,8 @@
     if(!e.repeat) pressed[e.code] = true;
     keys[e.code] = true;
     if(e.code==='Space') e.preventDefault();
-    if(e.code==='KeyR' && started) resetGame();
+    if(e.code==='Escape'){ e.preventDefault(); onEscapeKey(); return; }
+    if(e.code==='KeyR' && started && !paused) resetGame();
   });
   window.addEventListener('keyup', e=>{ keys[e.code]=false; });
 
@@ -880,6 +911,7 @@
   let gameOver = false;
   let gameWon = false;
   let running = false;
+  let paused = false;   // 일시정지 (Esc / 모바일 일시정지 버튼)
   let enraged = false;
   let lastTime = performance.now();
 
@@ -1069,12 +1101,8 @@
     started = true;
     resetGame();
   });
-  document.getElementById('controlsBtn').addEventListener('click', ()=>{
-    titleScreen.hidden = true; controlsScreen.hidden = false;
-  });
-  document.getElementById('backBtn').addEventListener('click', ()=>{
-    controlsScreen.hidden = true; titleScreen.hidden = false;
-  });
+  document.getElementById('controlsBtn').addEventListener('click', ()=>{ openControls(); });
+  document.getElementById('backBtn').addEventListener('click', ()=>{ showMenuScreen(menuHomeEl()); });
   retryBtn.addEventListener('click', ()=>{ resetGame(); });
 
   function playerHurtbox(){
@@ -1330,7 +1358,7 @@
       const dur=0.38;
       if(player.stateTime>0.12 && player.stateTime<0.26){
         // 관문의 적들은 한 번의 공격으로 여러 명을 동시에 맞힐 수 있다 (같은 적을 두 번 맞히지는 않음)
-        applyPlayerHit(playerAttackHitbox(), PLAYER_DAMAGE);
+        applyPlayerHit(playerAttackHitbox(PLAYER_ATTACK_REACH), PLAYER_DAMAGE);
       }
       if(player.stateTime>dur){ player.state='idle'; player.stateTime=0; }
       return;
@@ -3437,6 +3465,18 @@
     ctx.lineTo(handX,handY);
     ctx.stroke();
 
+    // 평타 판정 중엔 늘어난 사거리만큼 칼바람 궤적을 남긴다
+    if(player.state==='attack' && player.stateTime>0.12 && player.stateTime<0.30){
+      ctx.save();
+      ctx.globalAlpha = 0.4 * (1 - (player.stateTime-0.12)/0.18);
+      ctx.strokeStyle = '#eaf6ff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(shoulderX, shoulderY, PLAYER_ATTACK_REACH-10, -1.4, 0.9);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // 3단 베기 판정 중엔 칼이 지나간 자리에 궤적을 남긴다
     if(player.state==='combo'){
       const def = COMBO_STEPS[player.comboStep];
@@ -4593,7 +4633,7 @@
   }
 
   function update(dt){
-    if(!running) { return; }
+    if(!running || paused) { return; }
     if(deathSeq){
       deathSeq.t += dt;
       player.deadT += dt;
@@ -4658,14 +4698,16 @@
   // 버튼 입력은 키보드와 같은 keys/pressed 상태를 건드리므로 게임 로직은 그대로 쓴다.
   // ======================================================================
   const MC_STORE = 'grimhart_mobile_controls_v1';
-  const MC_IDS = ['move','attack','dash','j','k'];
-  const MC_NAMES = {move:'이동', attack:'공격', dash:'회피', j:'찌르기 (J)', k:'3단 베기 (K)'};
-  const MC_KEYS = {attack:'KeyL', dash:'ShiftLeft', j:'KeyJ', k:'KeyK'};
-  // 크기 50% = 이 기본 크기. 조이스틱·평타 > 회피 > J·K
-  const MC_BASE = {move:150, attack:112, dash:78, j:66, k:66};
+  const MC_IDS = ['move','attack','dash','j','k','jump'];
+  const MC_NAMES = {move:'이동', attack:'공격', dash:'회피', j:'찌르기 (J)', k:'3단 베기 (K)', jump:'점프'};
+  const MC_KEYS = {attack:'KeyL', dash:'ShiftLeft', j:'KeyJ', k:'KeyK', jump:'Space'};
+  // 크기 50% = 이 기본 크기. 조이스틱·평타 > 회피·점프 > J·K
+  const MC_BASE = {move:150, attack:112, dash:78, j:66, k:66, jump:78};
   const MC_SIZE_MIN = 25, MC_SIZE_MAX = 100;   // 크기 슬라이더 범위 (%)
   const MC_MIN_PX = 40;                         // 어떤 버튼도 이보다 작아지지 않는다
   const MC_TRANSP_MAX = 90;                     // 투명도 상한 (완전히 사라지지 않도록)
+  // 이동 방식: joystick = 조이스틱(위로 밀면 점프) / joyjump = 조이스틱 + 점프 버튼 / dpad = 십자키
+  const MC_MOVE_TYPES = ['joystick','joyjump','dpad'];
 
   function mcDefaults(){
     return {
@@ -4676,6 +4718,7 @@
         dash:  {x:843, y:441, size:50},   // 평타의 동남동
         j:     {x:637, y:414, size:50},   // 평타의 왼쪽
         k:     {x:667, y:318, size:50},   // 평타의 왼쪽 위
+        jump:  {x:845, y:338, size:50},   // 평타의 동북동 (조이스틱 + 점프 버튼 방식에서만)
       },
     };
   }
@@ -4687,7 +4730,7 @@
       if(raw){
         const s = JSON.parse(raw);
         if(typeof s.mobile==='boolean') d.mobile = s.mobile;
-        if(s.moveType==='joystick' || s.moveType==='dpad') d.moveType = s.moveType;
+        if(MC_MOVE_TYPES.includes(s.moveType)) d.moveType = s.moveType;
         if(isFinite(s.transparency)) d.transparency = clamp(+s.transparency, 0, MC_TRANSP_MAX);
         if(s.buttons){
           for(const id of MC_IDS){
@@ -4735,34 +4778,43 @@
       '<path d="M10 40 Q26 22 46 10" stroke="#eaf6ff" stroke-width="4"/>'+
       '<path d="M14 50 Q32 32 52 20" stroke="#eaf6ff" stroke-width="4"/>'+
       '<path d="M20 58 Q38 42 58 30" stroke="#ffd27a" stroke-width="6"/></svg>',
+    jump:'<svg class="icon" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">'+
+      '<path d="M16 34 L32 18 L48 34" stroke="#ffe7a8" stroke-width="6"/>'+
+      '<path d="M20 50 L32 38 L44 50" stroke="#d8b463" stroke-width="5" opacity="0.75"/>'+
+      '<path d="M22 58 H42" stroke="#efe6d8" stroke-width="3" opacity="0.5"/></svg>',
   };
-  const MC_JOY_SVG = '<svg viewBox="0 0 100 100">'+
-    '<circle cx="50" cy="50" r="31" fill="none" stroke="rgba(216,180,99,0.22)" stroke-width="1" stroke-dasharray="3 4"/>'+
-    '<path d="M50 4 L56 12 L44 12 Z" fill="rgba(255,231,168,0.85)"/>'+      // 위: 점프
-    '<path d="M50 96 L56 88 L44 88 Z" fill="rgba(239,230,216,0.45)"/>'+     // 아래: 발판 하강
-    '<path d="M4 50 L12 44 L12 56 Z" fill="rgba(239,230,216,0.6)"/>'+
-    '<path d="M96 50 L88 44 L88 56 Z" fill="rgba(239,230,216,0.6)"/>'+
-    '</svg>';
+  function mcJoySvg(upIsJump){
+    return '<svg viewBox="0 0 100 100">'+
+      '<circle cx="50" cy="50" r="31" fill="none" stroke="rgba(216,180,99,0.22)" stroke-width="1" stroke-dasharray="3 4"/>'+
+      '<path d="M50 4 L56 12 L44 12 Z" fill="'+(upIsJump ? 'rgba(255,231,168,0.85)' : 'rgba(239,230,216,0.45)')+'"/>'+   // 위: 점프 (점프 버튼 방식에선 점프 없음)
+      '<path d="M50 96 L56 88 L44 88 Z" fill="rgba(239,230,216,0.45)"/>'+     // 아래: 발판 하강
+      '<path d="M4 50 L12 44 L12 56 Z" fill="rgba(239,230,216,0.6)"/>'+
+      '<path d="M96 50 L88 44 L88 56 Z" fill="rgba(239,230,216,0.6)"/>'+
+      '</svg>';
+  }
   const MC_ARROW = '<svg viewBox="0 0 24 24"><path d="M12 4 L21 16 H3 Z" fill="#fff"/></svg>';
 
   function mcSizePx(id){ return Math.max(MC_MIN_PX, MC_BASE[id]*mcCur.buttons[id].size/50); }
+  function mcVisibleIds(){ return MC_IDS.filter(id => id!=='jump' || mcCur.moveType==='joyjump'); }
 
   function mcBuild(){
     mcReleaseAll();
     mcLayer.innerHTML = '';
     mcEls = {};
-    for(const id of MC_IDS){
+    if(!mcVisibleIds().includes(mcSelected)) mcSelected = 'attack';
+    for(const id of mcVisibleIds()){
       const el = document.createElement('div');
       el.className = 'mc';
       el.dataset.id = id;
       el.dataset.name = MC_NAMES[id];
       if(id==='move'){
-        if(mcCur.moveType==='joystick'){
-          el.classList.add('mc-joy');
-          el.innerHTML = MC_JOY_SVG + '<div class="knob"></div>';
-        } else {
+        if(mcCur.moveType==='dpad'){
           el.classList.add('mc-dpad');
-          el.innerHTML = ['up','left','right','down'].map(d=>'<div class="dp dp-'+d+'">'+MC_ARROW+'</div>').join('');
+          el.innerHTML = '<div class="mc-hit"></div>' + ['up','left','right','down'].map(d=>'<div class="dp dp-'+d+'">'+MC_ARROW+'</div>').join('');
+        } else {
+          el.classList.add('mc-joy');
+          // 손가락이 바깥 고리를 살짝 벗어나도 잡히도록 보이지 않는 넓은 터치 영역을 둔다
+          el.innerHTML = '<div class="mc-hit"></div>' + mcJoySvg(mcCur.moveType==='joystick') + '<div class="knob"></div>';
         }
       } else {
         el.classList.add('mc-btn');
@@ -4777,15 +4829,15 @@
         } : null,
         cooling:false,
       };
-      mcBind(id, el);
+      el.addEventListener('pointerdown', ev=>mcDown(id, ev));
     }
     mcApplyLayout();
   }
 
   function mcApplyLayout(){
     const op = 1 - mcCur.transparency/100;
-    for(const id of MC_IDS){
-      const e = mcEls[id]; if(!e) continue;
+    for(const id in mcEls){
+      const e = mcEls[id];
       const b = mcCur.buttons[id], s = mcSizePx(id);
       b.x = clamp(b.x, s/2, W - s/2);    // 무대 밖으로 나가지 않게
       b.y = clamp(b.y, s/2, H - s/2);
@@ -4801,6 +4853,8 @@
   // ---- 입력 ----
   const mcHeld = new Set();            // 모바일 버튼이 누르고 있는 키
   const mcMove = {left:false, right:false, up:false, down:false};
+  const mcActive = {};                 // 버튼 id -> 그 버튼을 누르고 있는 손가락(pointerId)
+  const mcDrag = {};                   // 설정 화면에서 끌고 있는 버튼 정보
   function mcSetKey(code, down){
     if(down){
       if(!keys[code]) pressed[code] = true;
@@ -4819,6 +4873,8 @@
     }
   }
   function mcReleaseAll(){
+    for(const id in mcActive) delete mcActive[id];
+    for(const id in mcDrag) delete mcDrag[id];
     mcSetMove(false,false,false,false);
     for(const code of Array.from(mcHeld)) mcSetKey(code, false);
     for(const id in mcEls){
@@ -4835,77 +4891,86 @@
   }
 
   function mcMoveInput(p){
-    const e = mcEls.move, b = mcCur.buttons.move, s = mcSizePx('move');
+    const e = mcEls.move; if(!e) return;
+    const b = mcCur.buttons.move, s = mcSizePx('move');
     let dx = p.x - b.x, dy = p.y - b.y;
-    if(mcCur.moveType==='joystick'){
-      const maxR = s*0.34;
-      const len = Math.hypot(dx, dy);
-      if(len > maxR){ dx *= maxR/len; dy *= maxR/len; }
-      e.knob.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)';
-      const nx = dx/maxR, ny = dy/maxR;
-      // 좌우 이동 / 위로 밀면 점프 / 아래로 밀면 발판 하강
-      mcSetMove(nx < -0.3, nx > 0.3, ny < -0.6, ny > 0.65);
-    } else {
+    if(mcCur.moveType==='dpad'){
       // 3x3 칸: 손가락이 있는 칸에 따라 (모서리 칸은 대각선 = 이동 + 점프/하강)
       const c = s/3;
       const col = dx < -c/2 ? 0 : dx > c/2 ? 2 : 1;
       const row = dy < -c/2 ? 0 : dy > c/2 ? 2 : 1;
       mcSetMove(col===0, col===2, row===0, row===2);
+    } else {
+      const maxR = s*0.34;
+      const len = Math.hypot(dx, dy);
+      if(len > maxR){ dx *= maxR/len; dy *= maxR/len; }
+      e.knob.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)';
+      const nx = dx/maxR, ny = dy/maxR;
+      // 좌우 이동 / 위로 밀면 점프 (점프 버튼 방식에선 없음) / 아래로 밀면 발판 하강
+      const jumpByStick = mcCur.moveType==='joystick';
+      mcSetMove(nx < -0.3, nx > 0.3, jumpByStick && ny < -0.6, ny > 0.65);
     }
   }
 
-  function mcBind(id, el){
-    let pid = null, drag = null;
-    el.addEventListener('pointerdown', ev=>{
-      ev.preventDefault();
-      if(pid!==null) return;
-      pid = ev.pointerId;
-      try{ el.setPointerCapture(pid); }catch(err){}
+  // 손가락을 누른 순간만 버튼에서 받고, 움직임/뗌은 창 전체에서 받는다.
+  // (손가락이 버튼 밖으로 미끄러지거나 포인터 캡처가 실패해도 놓치지 않도록)
+  function mcDown(id, ev){
+    ev.preventDefault();
+    const e = mcEls[id]; if(!e) return;
+    // 이전 손가락이 제대로 떼어지지 않은 채 남아 있으면 정리하고 새 손가락이 이어받는다
+    if(mcActive[id]!==undefined) mcEnd(id);
+    mcActive[id] = ev.pointerId;
+    try{ e.el.setPointerCapture(ev.pointerId); }catch(err){}
+    const p = mcToStage(ev);
+    if(mcEditing){
+      mcSelect(id);
+      const b = mcCur.buttons[id];
+      mcDrag[id] = {ox:p.x - b.x, oy:p.y - b.y, snap:mcClone(mcCur), moved:false, sx:p.x, sy:p.y};
+      return;
+    }
+    if(id==='move'){ e.el.classList.add('active'); mcMoveInput(p); }
+    else { e.el.classList.add('down'); mcSetKey(MC_KEYS[id], true); }
+  }
+  function mcPointerMove(ev){
+    for(const id in mcActive){
+      if(mcActive[id]!==ev.pointerId) continue;
       const p = mcToStage(ev);
       if(mcEditing){
-        mcSelect(id);
-        const b = mcCur.buttons[id];
-        drag = {ox:p.x - b.x, oy:p.y - b.y, snap:mcClone(mcCur), moved:false, sx:p.x, sy:p.y};
-        return;
-      }
-      if(id==='move'){ el.classList.add('active'); mcMoveInput(p); }
-      else { el.classList.add('down'); mcSetKey(MC_KEYS[id], true); }
-    });
-    el.addEventListener('pointermove', ev=>{
-      if(ev.pointerId!==pid) return;
-      const p = mcToStage(ev);
-      if(mcEditing){
-        if(!drag) return;
-        if(!drag.moved){
-          if(Math.hypot(p.x-drag.sx, p.y-drag.sy) < 3) return;
-          mcPushUndo(drag.snap); drag.moved = true;
+        const d = mcDrag[id]; if(!d) continue;
+        if(!d.moved){
+          if(Math.hypot(p.x-d.sx, p.y-d.sy) < 3) continue;
+          mcPushUndo(d.snap); d.moved = true;
         }
         const b = mcCur.buttons[id];
-        b.x = p.x - drag.ox; b.y = p.y - drag.oy;
+        b.x = p.x - d.ox; b.y = p.y - d.oy;
         mcApplyLayout();
-        return;
+      } else if(id==='move'){
+        mcMoveInput(p);
       }
-      if(id==='move') mcMoveInput(p);
-    });
-    const end = ev=>{
-      if(ev.pointerId!==pid) return;
-      pid = null;
-      if(drag){ drag = null; mcSync(); return; }
-      if(id==='move'){
-        el.classList.remove('active');
-        if(mcEls.move && mcEls.move.knob) mcEls.move.knob.style.transform = '';
-        mcSetMove(false,false,false,false);
-      } else {
-        el.classList.remove('down');
-        mcSetKey(MC_KEYS[id], false);
-      }
-    };
-    el.addEventListener('pointerup', end);
-    el.addEventListener('pointercancel', end);
-    el.addEventListener('lostpointercapture', end);
+    }
   }
+  function mcEnd(id){
+    if(mcActive[id]===undefined) return;
+    delete mcActive[id];
+    if(mcDrag[id]){ delete mcDrag[id]; mcSync(); return; }
+    const e = mcEls[id];
+    if(id==='move'){
+      if(e){ e.el.classList.remove('active'); if(e.knob) e.knob.style.transform = ''; }
+      mcSetMove(false,false,false,false);
+    } else {
+      if(e) e.el.classList.remove('down');
+      mcSetKey(MC_KEYS[id], false);
+    }
+  }
+  function mcPointerUp(ev){
+    for(const id in mcActive) if(mcActive[id]===ev.pointerId) mcEnd(id);
+  }
+  window.addEventListener('pointermove', mcPointerMove, {passive:true});
+  window.addEventListener('pointerup', mcPointerUp);
+  window.addEventListener('pointercancel', mcPointerUp);
   mcLayer.addEventListener('contextmenu', e=>e.preventDefault());
   window.addEventListener('blur', ()=>mcReleaseAll());
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) mcReleaseAll(); });
   document.addEventListener('touchmove', e=>{
     if(mcCur.mobile && !(e.target && e.target.tagName==='INPUT')) e.preventDefault();
   }, {passive:false});
@@ -4957,6 +5022,7 @@
 
   // 모바일 조작으로 게임을 시작하면 전체 화면 + 가로 고정을 시도한다 (지원하지 않으면 무시)
   startBtn.addEventListener('click', ()=>{
+    menuHome = 'pause';
     if(!mcCur.mobile) return;
     try{
       const de = document.documentElement;
@@ -4970,29 +5036,132 @@
     setTimeout(mcFit, 300);
   });
 
-  // ---- 매 프레임: 보이기/숨기기 + 쿨타임 ----
-  // 재시작 버튼: PC의 R 키와 같다
-  const mcRestartEl = document.getElementById('mcRestart');
-  mcRestartEl.addEventListener('pointerdown', ev=>{
-    ev.preventDefault();
-    mcRestartEl.classList.add('down');
-    mcReleaseAll();
-    if(started) resetGame();
-  });
-  for(const t of ['pointerup','pointercancel','pointerleave']) mcRestartEl.addEventListener(t, ()=>mcRestartEl.classList.remove('down'));
+  // ======================================================================
+  // ---------- 일시정지 ----------
+  // ======================================================================
+  const pauseScreen = document.getElementById('pauseScreen');
+  const keyScreen = document.getElementById('keyScreen');
+  const mcPauseEl = document.getElementById('mcPause');
+  let menuHome = 'title';   // 조작법/키 세팅에서 '돌아가기'를 누르면 돌아갈 곳 (title | pause)
+  function menuHomeEl(){ return menuHome==='pause' ? pauseScreen : titleScreen; }
+  function showMenuScreen(el){
+    for(const sc of [titleScreen, pauseScreen, controlsScreen, keyScreen]) sc.hidden = (sc!==el);
+  }
 
+  function canPause(){
+    return started && running && !paused && !deathSeq && !gameOver && msgCenter.style.display==='none';
+  }
+  function openPause(){
+    if(!canPause()) return;
+    paused = true;
+    mcReleaseAll();
+    menuHome = 'pause';
+    startOverlay.classList.add('pause-mode');
+    startOverlay.style.display = '';
+    showMenuScreen(pauseScreen);
+  }
+  function resumeGame(){
+    paused = false;
+    for(const k in pressed) pressed[k] = false;   // 일시정지 중에 누른 키가 재개하자마자 발동하지 않도록
+    startOverlay.style.display = 'none';
+    startOverlay.classList.remove('pause-mode');
+    lastTime = performance.now();
+  }
+  function goToTitle(){
+    paused = false;
+    running = false; started = false;
+    gameOver = false; gameWon = false; deathSeq = null;
+    // 처음 화면에서 다시 시작하면 관문부터 새로 시작한다
+    stageIndex = 0; arenaCheckpoint = false;
+    msgCenter.style.display = 'none'; msgCenter.style.opacity = '0';
+    phaseBanner.style.transition = 'none'; phaseBanner.style.opacity = '0';
+    phaseBanner.style.color = ''; phaseBanner.style.textShadow = '';
+    bossBarEl.style.background = '';
+    mcReleaseAll();
+    menuHome = 'title';
+    startOverlay.classList.remove('pause-mode');
+    startOverlay.style.display = '';
+    showMenuScreen(titleScreen);
+  }
+  function onEscapeKey(){
+    if(mcEditing) return;
+    if(paused){
+      if(!pauseScreen.hidden) resumeGame();
+      else showMenuScreen(pauseScreen);
+    } else if(started){
+      openPause();
+    } else if(titleScreen.hidden){
+      showMenuScreen(titleScreen);
+    }
+  }
+
+  mcPauseEl.addEventListener('pointerdown', ev=>{
+    ev.preventDefault();
+    mcPauseEl.classList.add('down');
+    openPause();
+  });
+  for(const t of ['pointerup','pointercancel','pointerleave']) mcPauseEl.addEventListener(t, ()=>mcPauseEl.classList.remove('down'));
+
+  document.getElementById('pResumeBtn').addEventListener('click', resumeGame);
+  document.getElementById('pControlsBtn').addEventListener('click', ()=>openControls());
+  document.getElementById('pKeyBtn').addEventListener('click', ()=>{ showMenuScreen(keyScreen); mcKeySync(); });
+  document.getElementById('pRetryBtn').addEventListener('click', ()=>{ resumeGame(); resetGame(); });
+  document.getElementById('pTitleBtn').addEventListener('click', goToTitle);
+
+  // ---- 조작법 화면 (PC / 모바일 탭) ----
+  const ctlTabPc = document.getElementById('ctlTabPc'), ctlTabMob = document.getElementById('ctlTabMob');
+  const ctlPc = document.getElementById('ctlPc'), ctlMob = document.getElementById('ctlMob');
+  function ctlRow(a, b, c){ return '<tr><td>'+a+'</td><td>'+b+'</td><td class="desc">'+(c||'')+'</td></tr>'; }
+  function buildMobileControlsTable(){
+    const t = mcSaved.moveType;
+    const moveName = t==='dpad' ? '십자키' : '조이스틱';
+    let rows = '';
+    if(t==='dpad'){
+      rows += ctlRow('◀ ▶', '이동', '대각선 칸(↖ ↗)은 이동 + 점프');
+      rows += ctlRow('▲', '점프', '');
+      rows += ctlRow('▼', '발판 하강', '발판 위에서 아래로 내려간다');
+    } else {
+      rows += ctlRow(moveName+' 좌우', '이동', '');
+      if(t==='joystick') rows += ctlRow(moveName+' 위로', '점프', '');
+      else rows += ctlRow('점프 버튼', '점프', '공격 버튼 오른쪽 위');
+      rows += ctlRow(moveName+' 아래로', '발판 하강', '발판 위에서 아래로 내려간다');
+    }
+    rows += ctlRow('공격 버튼 (큰 원)', '공격', '');
+    rows += ctlRow('찌르기 버튼', '찌르기', '1초간 누르고 있으면 강찌르기 · 테두리 링이 차오르면 강찌르기 준비 완료');
+    rows += ctlRow('3단 베기 버튼', '3단 베기', '버튼이 어두워지고 남은 쿨타임이 숫자로 표시된다');
+    rows += ctlRow('회피 버튼', '회피 구르기', '기력이 모자라면 버튼이 흐려진다');
+    rows += ctlRow('일시정지 버튼 (우측 상단)', '일시정지', '조작 키 편집 · 다시하기 · 처음 화면');
+    ctlMob.innerHTML = rows;
+  }
+  function setControlsTab(mob){
+    if(mob) buildMobileControlsTable();
+    ctlPc.hidden = mob; ctlMob.hidden = !mob;
+    ctlTabPc.classList.toggle('on', !mob); ctlTabMob.classList.toggle('on', mob);
+  }
+  function openControls(){
+    setControlsTab(mcSaved.mobile);   // 지금 쓰는 조작 방식의 탭부터 보여준다
+    showMenuScreen(controlsScreen);
+  }
+  ctlTabPc.addEventListener('click', ()=>setControlsTab(false));
+  ctlTabMob.addEventListener('click', ()=>setControlsTab(true));
+
+  // ---- 매 프레임: 보이기/숨기기 + 쿨타임 ----
   let mcShown = false;
   function mcFrame(){
-    const restartShow = !mcEditing && mcCur.mobile && started && msgCenter.style.display==='none';
-    if(restartShow !== mcRestartEl.classList.contains('show')) mcRestartEl.classList.toggle('show', restartShow);
-    if(restartShow) mcRestartEl.style.setProperty('--op', Math.max(0.35, 1 - mcCur.transparency/100).toFixed(2));
-    const show = mcEditing || (mcCur.mobile && started && msgCenter.style.display==='none');
+    const playing = mcCur.mobile && started && running && !paused && msgCenter.style.display==='none';
+    const pauseShow = !mcEditing && playing && !deathSeq;
+    if(pauseShow !== mcPauseEl.classList.contains('show')) mcPauseEl.classList.toggle('show', pauseShow);
+    if(pauseShow) mcPauseEl.style.setProperty('--op', Math.max(0.35, 1 - mcCur.transparency/100).toFixed(2));
+
+    const show = mcEditing || playing;
     if(show !== mcShown){
       mcShown = show;
       mcLayer.classList.toggle('show', show);
       if(!show) mcReleaseAll();
     }
     if(!show) return;
+    // 누르고 있는 버튼의 키는 매 프레임 다시 눌린 상태로 맞춘다 (어디선가 풀려도 이동이 끊기지 않도록)
+    for(const code of mcHeld) keys[code] = true;
     if(mcEditing){
       for(const id of ['j','k']) mcCool(id, 0, 1, -1);
       if(mcEls.dash) mcEls.dash.el.classList.remove('nostam');
@@ -5004,7 +5173,6 @@
   }
 
   // ---- 키 세팅 화면 ----
-  const keyScreen = document.getElementById('keyScreen');
   const mobOnBtn = document.getElementById('mobOnBtn');
   const mobOffBtn = document.getElementById('mobOffBtn');
   const mobileSetBtn = document.getElementById('mobileSetBtn');
@@ -5015,7 +5183,7 @@
     mobOffBtn.classList.toggle('on', !on);
     mobileSetBtn.disabled = !on;
     keyNote.textContent = on
-      ? '모바일 조작 사용 중 — 화면의 버튼으로 플레이합니다. 버튼의 위치·크기·투명도는 「모바일 버튼 설정」에서 바꿀 수 있습니다.'
+      ? '모바일 조작 사용 중 — 화면의 버튼으로 플레이합니다. 버튼의 위치·크기·투명도와 이동 방식은 「모바일 버튼 설정」에서 바꿀 수 있습니다.'
       : 'PC 조작 사용 중 — 키보드로 플레이하며 모바일 버튼은 표시되지 않습니다.';
     document.body.classList.toggle('mobile-mode', mcCur.mobile);
   }
@@ -5025,10 +5193,10 @@
     mcKeySync(); mcFit();
   }
   document.getElementById('keySetBtn').addEventListener('click', ()=>{
-    titleScreen.hidden = true; keyScreen.hidden = false; mcKeySync();
+    showMenuScreen(keyScreen); mcKeySync();
   });
   document.getElementById('keyBackBtn').addEventListener('click', ()=>{
-    keyScreen.hidden = true; titleScreen.hidden = false;
+    showMenuScreen(menuHomeEl());
   });
   mobOnBtn.addEventListener('click', ()=>{ mcSetMobile(true); mcOpenEditor(); });
   mobOffBtn.addEventListener('click', ()=>{ mcSetMobile(false); });
@@ -5039,7 +5207,11 @@
   const meSel = document.getElementById('meSel');
   const meSize = document.getElementById('meSize'), meSizeVal = document.getElementById('meSizeVal');
   const meOp = document.getElementById('meOp'), meOpVal = document.getElementById('meOpVal');
-  const meJoy = document.getElementById('meJoy'), meDpad = document.getElementById('meDpad');
+  const meMoveBtns = {
+    joystick: document.getElementById('meJoy'),
+    joyjump: document.getElementById('meJoyJump'),
+    dpad: document.getElementById('meDpad'),
+  };
   const meReset = document.getElementById('meReset'), meUndoBtn = document.getElementById('meUndo');
   const meSave = document.getElementById('meSave'), meBack = document.getElementById('meBack');
   const meStatus = document.getElementById('meStatus');
@@ -5057,8 +5229,7 @@
     meSizeVal.textContent = Math.round(mcCur.buttons[mcSelected].size)+'%';
     meOp.value = mcCur.transparency;
     meOpVal.textContent = Math.round(mcCur.transparency)+'%';
-    meJoy.classList.toggle('on', mcCur.moveType==='joystick');
-    meDpad.classList.toggle('on', mcCur.moveType==='dpad');
+    for(const t in meMoveBtns) meMoveBtns[t].classList.toggle('on', mcCur.moveType===t);
     meUndoBtn.disabled = mcUndo.length===0;
     meSave.disabled = !mcDirty();
     if(mcDirty()) meStatus.textContent = '';
@@ -5108,8 +5279,7 @@
     mcCur.moveType = t;
     mcBuild(); mcSync();
   }
-  meJoy.addEventListener('click', ()=>meSetMoveType('joystick'));
-  meDpad.addEventListener('click', ()=>meSetMoveType('dpad'));
+  for(const t in meMoveBtns) meMoveBtns[t].addEventListener('click', ()=>meSetMoveType(t));
 
   meReset.addEventListener('click', ()=>{
     const d = mcDefaults();
