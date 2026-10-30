@@ -447,7 +447,7 @@
           <tr><td><span class="key">Space</span></td><td>점프</td><td class="desc"></td></tr>
           <tr><td><span class="key">S</span></td><td>발판 하강</td><td class="desc">발판 위에서 아래로 내려간다</td></tr>
           <tr><td><span class="key">L</span></td><td>공격</td><td class="desc"></td></tr>
-          <tr><td><span class="key">J</span></td><td>찌르기</td><td class="desc">1초간 누르고 있으면 강찌르기 · 평타/다른 스킬을 끊고 발동 · 쿨타임 1초</td></tr>
+          <tr><td><span class="key">J</span></td><td>찌르기</td><td class="desc">0.5초간 누르고 있으면 강찌르기 · 평타/다른 스킬을 끊고 발동 · 쿨타임 1초</td></tr>
           <tr><td><span class="key">K</span></td><td>3단 베기</td><td class="desc">한 번 누르면 3연타 · 적의 공격을 끊는다 · 평타/다른 스킬을 끊고 발동 · 쿨타임 5초</td></tr>
           <tr><td><span class="key">Shift</span></td><td>회피 구르기</td><td class="desc">기력 소모 · 잠시 무적</td></tr>
           <tr><td><span class="key">Esc</span></td><td>일시정지</td><td class="desc">계속하기 · 조작법 · 조작 키 편집 · 다시하기 · 처음 화면</td></tr>
@@ -517,6 +517,12 @@
   const PLAYER_DAMAGE = 10;
   const GRUNT_HP = 40;
   const GRUNT_DAMAGE = 10;
+  // 관문의 기사 4종 (랜덤 부여): crystal 결정 갑주 / arm 변형된 팔 / archer 변형된 다리(궁수) / brute 변형된 상반신
+  const GRUNT_TYPES = ['crystal','arm','archer','brute'];
+  const GRUNT_SPEED = 130;
+  const BRUTE_DAMAGE = 15;
+  const ARCHER_TELE = 0.7;
+  const ARROW_SPEED = 560, ARROW_RANGE = 820;
 
   const GRAVITY = 1700;
   const JUMP_VELOCITY = -700;
@@ -573,8 +579,8 @@
   const THROW_SPEED = 1300, THROW_LIFT = -520;
 
   // ---- 플레이어 스킬 ----
-  // J: 찌르기 - 짧게 누르면 기본 찌르기, 1초간 누르고 있으면 강찌르기가 나간다
-  const THRUST_CHARGE_TIME = 1.0;
+  // J: 찌르기 - 짧게 누르면 기본 찌르기, 0.5초간 누르고 있으면 강찌르기가 나간다
+  const THRUST_CHARGE_TIME = 0.5;
   const THRUST_DAMAGE = 15, THRUST_STRONG_DAMAGE = 25;
   const THRUST_DIST = GRAB_DASH_DIST;                // 보스 잡기의 돌진 거리와 동일
   const THRUST_STRONG_DIST = GRAB_DASH_DIST*1.25;    // 강공격은 그 1.25배
@@ -607,78 +613,86 @@
   const ARENA_CENTER_X = (ARENA_FLOOR_X + TUTORIAL_LEVEL_WIDTH - WALL_THICKNESS)/2;
   const ARENA_SEAL_DEPTH = 60;                              // 바닥 안쪽으로 이만큼 들어서면 입구가 닫힌다
 
+  const GY = GROUND_Y;
+  // 설원 - 던전 슬래셔식 구성: 이동 구간과 "전투 구역(잠금 방)"이 번갈아 나온다.
+  // 전투 구역에 들어서면 양쪽에 얼음벽이 솟아 화면 하나 크기의 방이 되고, 안의 기사를 모두 쓰러뜨려야 벽이 깨진다.
   const GROUND_SEGMENTS = [
-    // A. 성문 앞 - 평지, 첫 발판으로 점프를 익힌다
-    {x1:0,    x2:700,  y:GROUND_Y},
-    // B. 오르막 성벽 - 카타나 제로식 계단: 한 칸씩 뛰어 올라 꼭대기 파수병을 친다
-    {x1:700,  x2:900,  y:GROUND_Y-45},
-    {x1:900,  x2:1100, y:GROUND_Y-90},
-    {x1:1100, x2:1300, y:GROUND_Y-135},
-    // C. 2층 회랑 - 아래층/위층 중 하나를 골라 지난다
-    {x1:1300, x2:2300, y:GROUND_Y},
-    // D. 균열 지대 - 한 단 낮은 협곡. 컵헤드식으로 떠 있는 발판을 건너뛰거나, 바닥의 기사들과 싸운다
-    {x1:2300, x2:3100, y:GROUND_Y+35},
-    // E. 광장 - 스컬식 다층 전투 공간
-    {x1:3100, x2:4000, y:GROUND_Y},
+    // A. 설원 입구
+    {x1:0,    x2:800,  y:GY},
+    // B. 얼어붙은 비탈 - 올라섰다가 전투 구역으로 뛰어내린다
+    {x1:800,  x2:1000, y:GY-50},
+    {x1:1000, x2:1250, y:GY-100},
+    {x1:1250, x2:1400, y:GY-50},
+    // C. 전투 구역 1 「얼음 감옥」
+    {x1:1400, x2:2300, y:GY},
+    // D. 빙하 협곡 - 한 단 낮은 협곡, 떠 있는 얼음 발판
+    {x1:2300, x2:3200, y:GY+35},
+    // E. 전투 구역 2 「눈보라 광장」
+    {x1:3200, x2:4100, y:GY},
     // F. 관문 오르막
-    {x1:4000, x2:4350, y:GROUND_Y-50},
-    {x1:4350, x2:ARENA_FLOOR_X, y:GROUND_Y-100},
-    // G. 수문장의 방 - 보스방과 같은 폭, 같은 바닥 높이 (입구에서 한 단 아래로 뛰어내려 들어간다)
-    {x1:ARENA_FLOOR_X, x2:TUTORIAL_LEVEL_WIDTH, y:GROUND_Y},
+    {x1:4100, x2:4400, y:GY-50},
+    {x1:4400, x2:ARENA_FLOOR_X, y:GY-100},
+    // G. 수문장의 방
+    {x1:ARENA_FLOOR_X, x2:TUTORIAL_LEVEL_WIDTH, y:GY},
   ];
 
-  // 구역 이름 (배경에 희미하게 새겨진다)
+  // 전투 구역 (정확히 화면 하나 = 900px)
+  const LOCK_ZONES = [
+    {x1:1400, x2:2300, name:'얼음 감옥'},
+    {x1:3200, x2:4100, name:'눈보라 광장'},
+  ];
+  let zoneState = LOCK_ZONES.map(()=>({state:'idle', anim:0}));
+
   const ZONE_LABELS = [
-    {x:120,  text:'성문 앞'},
-    {x:760,  text:'오르막 성벽'},
-    {x:1360, text:'회랑'},
-    {x:2340, text:'균열 지대'},
-    {x:3160, text:'광장'},
-    {x:4060, text:'관문'},
+    {x:120,  text:'설원 입구'},
+    {x:830,  text:'얼어붙은 비탈'},
+    {x:1460, text:'얼음 감옥'},
+    {x:2340, text:'빙하 협곡'},
+    {x:3260, text:'눈보라 광장'},
+    {x:4140, text:'관문'},
     {x:ARENA_X1+60, text:'수문장의 방'},
   ];
 
-  // 단방향 발판 (아래에서 뚫고 올라가며, S로 내려갈 수 있다). pillars: 아래를 받치는 장식 기둥 x 좌표
-  const PLATFORMS = [
-    // A
-    {x1:220,  x2:340,  y:GROUND_Y-65},                                  // 점프 연습용 첫 발판
-    // C. 회랑: 오르는 디딤판 + 길게 이어진 2층
-    {x1:1380, x2:1450, y:GROUND_Y-65},                                  // 2층으로 오르는 디딤판
-    {x1:1470, x2:2160, y:GROUND_Y-130, pillars:[1560, 1815, 2070]},     // 2층 회랑
-    // D. 균열 지대: 높낮이가 엇갈린 부유 발판
-    {x1:2370, x2:2460, y:GROUND_Y-70},
-    {x1:2530, x2:2610, y:GROUND_Y-130},
-    {x1:2690, x2:2780, y:GROUND_Y-90},
-    {x1:2850, x2:2930, y:GROUND_Y-150},
-    {x1:3000, x2:3090, y:GROUND_Y-95},
-    // E. 광장: 좌우 낮은 단 + 중앙 높은 단
-    {x1:3240, x2:3400, y:GROUND_Y-80},
-    {x1:3700, x2:3860, y:GROUND_Y-80},
-    {x1:3470, x2:3630, y:GROUND_Y-160},
-    // F. 관문 오르막의 쉼터
-    {x1:4140, x2:4260, y:GROUND_Y-130},
-    // G. 수문장의 방: 같은 높이의 낮은 발판 2개(좌우) + 그보다 높은 중앙 발판 1개
-    {x1:ARENA_FLOOR_X+100, x2:ARENA_FLOOR_X+250, y:GROUND_Y-85},
-    {x1:TUTORIAL_LEVEL_WIDTH-WALL_THICKNESS-250, x2:TUTORIAL_LEVEL_WIDTH-WALL_THICKNESS-100, y:GROUND_Y-85},
-    {x1:ARENA_CENTER_X-70, x2:ARENA_CENTER_X+70, y:GROUND_Y-170},
-  ];
-  const [P_INTRO, P_STAIR_C, P_CORRIDOR, P_D1, P_D2, P_D3, P_D4, P_D5, P_PL, P_PR, P_PC, P_F, P_AL, P_AR, P_AC] = PLATFORMS;
+  // 단방향 발판 (아래에서 뚫고 올라가며, S로 내려갈 수 있다)
+  const P_INTRO = {x1:260,  x2:380,  y:GY-65};
+  const P_Z1_L  = {x1:1520, x2:1660, y:GY-80};
+  const P_Z1_R  = {x1:2040, x2:2180, y:GY-80};
+  const P_Z1_C  = {x1:1790, x2:1910, y:GY-160, pillars:[1850]};
+  const P_D1 = {x1:2380, x2:2470, y:GY-60};
+  const P_D2 = {x1:2540, x2:2620, y:GY-125};
+  const P_D3 = {x1:2700, x2:2790, y:GY-85};
+  const P_D4 = {x1:2860, x2:2950, y:GY-150};
+  const P_D5 = {x1:3030, x2:3120, y:GY-95};
+  const P_Z2_L = {x1:3320, x2:3480, y:GY-80};
+  const P_Z2_R = {x1:3820, x2:3980, y:GY-80};
+  const P_Z2_C = {x1:3570, x2:3730, y:GY-160, pillars:[3610, 3690]};
+  const P_F  = {x1:4180, x2:4300, y:GY-130};
+  // 수문장의 방: 같은 높이의 낮은 발판 2개(좌우) + 그보다 높은 중앙 발판 1개
+  const P_AL = {x1:ARENA_FLOOR_X+100, x2:ARENA_FLOOR_X+250, y:GY-85};
+  const P_AR = {x1:TUTORIAL_LEVEL_WIDTH-WALL_THICKNESS-250, x2:TUTORIAL_LEVEL_WIDTH-WALL_THICKNESS-100, y:GY-85};
+  const P_AC = {x1:ARENA_CENTER_X-70, x2:ARENA_CENTER_X+70, y:GY-170};
+  const PLATFORMS = [P_INTRO, P_Z1_L, P_Z1_R, P_Z1_C, P_D1, P_D2, P_D3, P_D4, P_D5,
+    P_Z2_L, P_Z2_R, P_Z2_C, P_F, P_AL, P_AR, P_AC];
 
   // 잡몹은 중력 없이 자기 발판/지면 위에서만 좌우로 움직이므로, 모두 자기 구역 범위를 지정한다
-  function onPlat(p){ return {x:(p.x1+p.x2)/2, y:p.y, xMin:p.x1+16, xMax:p.x2-16}; }
+  function onPlat(p, zone){ return {x:(p.x1+p.x2)/2, y:p.y, xMin:p.x1+16, xMax:p.x2-16, zone}; }
+  const Z1 = {xMin:1456, xMax:2244}, Z2 = {xMin:3256, xMax:4044};
   const GRUNT_SPAWNS = [
-    {x:500,  y:GROUND_Y,      xMin:380,  xMax:690},                      // A. 성문 앞
-    {x:1200, y:GROUND_Y-135,  xMin:1116, xMax:1290},                     // B. 성벽 꼭대기 파수병
-    {x:1900, y:GROUND_Y,      xMin:1310, xMax:2290},                     // C. 회랑 아래층
-    {x:1700, y:P_CORRIDOR.y,  xMin:P_CORRIDOR.x1+16, xMax:P_CORRIDOR.x2-16}, // C. 회랑 위층
-    {x:2620, y:GROUND_Y+35,   xMin:2316, xMax:3084},                     // D. 협곡 바닥 1
-    {x:2950, y:GROUND_Y+35,   xMin:2316, xMax:3084},                     // D. 협곡 바닥 2
-    {x:3330, y:GROUND_Y,      xMin:3116, xMax:3990},                     // E. 광장 무리 1
-    {x:3550, y:GROUND_Y,      xMin:3116, xMax:3990},                     // E. 광장 무리 2
-    {x:3780, y:GROUND_Y,      xMin:3116, xMax:3990},                     // E. 광장 무리 3
-    onPlat(P_PC),                                                        // E. 중앙 높은 단
-    {x:4600, y:GROUND_Y-100,  xMin:4366, xMax:4744},                     // F. 관문 앞 마지막 기사
-    // G. 수문장의 방에는 일반 기사 대신 중간보스 '수문장'이 서 있다 (아래 midboss)
+    {x:600,  y:GY,     xMin:420,  xMax:790},                  // A. 설원 입구
+    {x:1120, y:GY-100, xMin:1016, xMax:1234},                 // B. 비탈 꼭대기
+    {x:1700, y:GY, xMin:Z1.xMin, xMax:Z1.xMax, zone:0},       // C. 얼음 감옥
+    {x:1980, y:GY, xMin:Z1.xMin, xMax:Z1.xMax, zone:0},
+    {x:2200, y:GY, xMin:Z1.xMin, xMax:Z1.xMax, zone:0},
+    onPlat(P_Z1_C, 0),
+    {x:2600, y:GY+35, xMin:2316, xMax:3184},                  // D. 협곡 바닥
+    {x:2980, y:GY+35, xMin:2316, xMax:3184},
+    onPlat(P_D4),                                             // D. 높은 얼음 발판
+    {x:3380, y:GY, xMin:Z2.xMin, xMax:Z2.xMax, zone:1},       // E. 눈보라 광장
+    {x:3620, y:GY, xMin:Z2.xMin, xMax:Z2.xMax, zone:1},
+    {x:3880, y:GY, xMin:Z2.xMin, xMax:Z2.xMax, zone:1},
+    {x:4020, y:GY, xMin:Z2.xMin, xMax:Z2.xMax, zone:1},
+    onPlat(P_Z2_C, 1),
+    {x:4600, y:GY-100, xMin:4416, xMax:4744},                 // F. 관문 앞
   ];
 
   // ---- 수문장 (중간보스) ----
@@ -719,11 +733,18 @@
   const MB_STORM_MIN_SKILLS = 5, MB_STORM_CHANCE = 0.5;
   // 발판 추적 도약
   const MB_HOP_TIME = 0.42;
+  // 2페이즈 전환: 게임 정지 → 결정 빛이 꺼짐 → 빨간빛 3회 점멸 → 빨간빛으로 고정
+  const MB_TR_OFF = 0.3, MB_TR_BLINK = 0.08, MB_TR_HOLD = 0.3;
+  const MB_TR_END = MB_TR_OFF + MB_TR_BLINK*6 + MB_TR_HOLD;
+  // 처치: 결정 빛이 보라색으로 돌아옴 → 결정이 자라 보석 덩어리가 됨 → 깨짐
+  const MB_D_GLOW = 0.35, MB_D_GROW = 1.35, MB_D_SHATTER = 1.8;
+  const MB_PURPLE = {rgb:'180,140,255', hex:'#9b6bff', soft:'#c9a2ff', pale:'#e3d0ff'};
+  const MB_RED    = {rgb:'255,78,64',  hex:'#ff3b30', soft:'#ff8a7a', pale:'#ffd6cc'};
 
   // 바닥을 장식하는 잔해 더미 (순수 시각 요소, 충돌 없음)
   const GROUND_DEBRIS = [
-    {x:150, s:1.0}, {x:640, s:0.85}, {x:1340, s:0.9}, {x:2240, s:1.0},
-    {x:2480, s:0.8}, {x:3150, s:1.05}, {x:3960, s:0.9}, {x:4700, s:0.85},
+    {x:150, s:1.0}, {x:700, s:0.85}, {x:1330, s:0.9}, {x:2250, s:1.0},
+    {x:2480, s:0.8}, {x:3150, s:1.05}, {x:4160, s:0.9}, {x:4700, s:0.85},
     {x:4900, s:0.9}, {x:5480, s:1.0},
   ];
 
@@ -844,13 +865,21 @@
     let lo = WALL_THICKNESS+halfW;
     let hi = lw-WALL_THICKNESS-halfW;
     if(stageIndex===0){
-      if(arenaSealed) lo = ARENA_FLOOR_X+halfW;
+      const lz = lockedZone();
+      if(lz){ lo = lz.x1+WALL_THICKNESS+halfW; hi = lz.x2-WALL_THICKNESS-halfW; }
+      else if(arenaSealed) lo = ARENA_FLOOR_X+halfW;
       else if(!gateOpen) hi = ARENA_X1-halfW;
       if(exitOpen) hi = lw-6;
     } else if(bossExitOpen){
       hi = lw-6;
     }
     return clamp(x, lo, hi);
+  }
+
+  function lockedZone(){
+    if(stageIndex!==0) return null;
+    for(let i=0;i<LOCK_ZONES.length;i++) if(zoneState[i].state==='locked') return LOCK_ZONES[i];
+    return null;
   }
 
   // ---------- entities ----------
@@ -901,7 +930,8 @@
     dormant: true, surface: null, playerSurface: null, skillCount: 0, walking: false,
   };
   let mbBlades = [];   // 수문장의 검기 {x,y,vx,vy,ang,dmg}
-  let mbPending = [];  // 발사 대기 중인 검기 (검기 난무 7개/12개의 발사 오차) {delay,x,y,ang,dmg}
+  let mbPending = [];
+  let arrows = [];     // 궁수 기사의 화살 {x,y,vx,vy,ang,dist,dmg}  // 발사 대기 중인 검기 (검기 난무 7개/12개의 발사 오차) {delay,x,y,ang,dmg}
   let lastHitMidboss = false;
 
   let stageIndex = 0; // 0 = 관문(튜토리얼), 1 = 보스
@@ -993,17 +1023,24 @@
   function setupTutorial(){
     player.x = 100; player.y = GROUND_Y; player.vy=0; player.grounded=true; player.onPlatform=false;
     player.facing = 1; player.state='idle'; player.stateTime=0;
-    grunts = GRUNT_SPAWNS.map(s => ({
-      x: s.x,
-      y: s.y,
-      w:32, h:58, hp: GRUNT_HP, maxHp: GRUNT_HP,
-      facing: -1, state:'idle', stateTime: Math.random()*0.3, hurtFlash: 0,
-      hitByAttackId: -1,
-      xMin: s.xMin!==undefined ? s.xMin : WALL_THICKNESS+16,
-      xMax: s.xMax!==undefined ? s.xMax : TUTORIAL_LEVEL_WIDTH-WALL_THICKNESS-16,
-      arena: !!s.arena,
-      dormant: !!s.arena,
-    }));
+    grunts = GRUNT_SPAWNS.map(s => {
+      const type = GRUNT_TYPES[Math.floor(Math.random()*GRUNT_TYPES.length)];
+      return {
+        x: s.x, y: s.y, type,
+        w:32, h:58, hp: GRUNT_HP, maxHp: GRUNT_HP,
+        dmg: type==='brute' ? BRUTE_DAMAGE : GRUNT_DAMAGE,
+        speed: GRUNT_SPEED*(type==='archer' ? 1.2 : 1),   // 다리가 변형된 궁수는 20% 빠르다
+        facing: -1, state:'idle', stateTime: Math.random()*0.3, hurtFlash: 0,
+        hitByAttackId: -1, aim: 0, moving: false,
+        xMin: s.xMin!==undefined ? s.xMin : WALL_THICKNESS+16,
+        xMax: s.xMax!==undefined ? s.xMax : TUTORIAL_LEVEL_WIDTH-WALL_THICKNESS-16,
+        zone: s.zone,
+        arena: !!s.arena,
+        dormant: !!s.arena || s.zone!==undefined,   // 전투 구역의 기사는 구역이 잠길 때 깨어난다
+      };
+    });
+    zoneState = LOCK_ZONES.map(()=>({state:'idle', anim:0}));
+    arrows = [];
     resetMidboss();
     gateOpen = false; arenaSealed = false; exitOpen = false; sealAnim = 0;
     camera.x = 0;
@@ -1015,7 +1052,7 @@
     player.x = 220; player.y = GROUND_Y; player.vy=0; player.grounded=true; player.onPlatform=false;
     player.facing = 1; player.state='idle'; player.stateTime=0;
     grunts = [];
-    mbBlades = []; mbPending = [];
+    mbBlades = []; mbPending = []; arrows = []; trBlood = [];
     gateOpen = false; arenaSealed = false; exitOpen = false; sealAnim = 0;
     camera.x = 0;
     Object.assign(boss, {
@@ -1065,6 +1102,7 @@
       else { g.dormant=false; }
     }
     gateOpen = true; arenaSealed = true; sealAnim = 1; exitOpen = false;
+    zoneState = LOCK_ZONES.map(()=>({state:'clear', anim:1}));
     player.x = ARENA_FLOOR_X + 90; player.y = GROUND_Y; player.vy = 0;
     player.grounded = true; player.onPlatform = false; player.facing = 1;
     resetMidboss();
@@ -1239,7 +1277,7 @@
     const wallX = player.x + dir*player.w/2;
     addShake(16);
     spawnParticles(wallX, player.y-player.h/2, '#c9cdd4', 18,1,170,0.5);
-    spawnParticles(wallX, player.y-player.h/2, stageIndex===0 ? '#7c5cff' : player.throwFx, 10,1,130,0.45);
+    spawnParticles(wallX, player.y-player.h/2, stageIndex===0 ? mbPal().hex : player.throwFx, 10,1,130,0.45);
     player.x = clampPlayerX(player.x - dir*6); // 벽에서 살짝 튕겨 나온다
     const dmg = stageIndex===0 ? mbDmg(MB_THROW_WALL_DMG) : player.throwWallDmg;
     if(dmg>0) damagePlayer(dmg, true);
@@ -1274,7 +1312,7 @@
     player.attackId++;
     player.cdJ = THRUST_COOLDOWN;
     addShake(strong?5:2);
-    spawnParticles(player.x, player.y-player.h*0.6, strong?'#ffd27a':'#cfd6dd', strong?14:7,1,110,0.35);
+    spawnParticles(player.x, player.y-player.h*0.6, strong?'#6fb0ff':'#cfd6dd', strong?14:7,1,110,0.35);
   }
 
   // ---- 스킬 입력 / 캔슬 ----
@@ -1326,7 +1364,7 @@
       const desiredX = player.x + player.throwDir*THROW_SPEED*dt;
       const boundedX = clampPlayerX(desiredX);
       player.x = boundedX;
-      spawnParticles(player.x, player.y-player.h/2, stageIndex===0 ? '#7c5cff' : player.throwFx, 1,1,40,0.25);
+      spawnParticles(player.x, player.y-player.h/2, stageIndex===0 ? mbPal().hex : player.throwFx, 1,1,40,0.25);
       if(boundedX !== desiredX) slamIntoWall();
       return;
     }
@@ -1383,7 +1421,7 @@
         startThrust(false);                   // 그 전에 떼면 기본 찌르기
       } else if(Math.random()<0.35){
         const tipX = player.x + player.facing*6;
-        spawnParticles(tipX, player.y-player.h*0.65, '#ffd27a', 1,1,40,0.3);
+        spawnParticles(tipX, player.y-player.h*0.65, '#7fb8ff', 1,1,40,0.3);
       }
       return;
     }
@@ -1402,7 +1440,7 @@
         player.x = boundedX;
         player.thrustTraveled += moved;
         if(moved < step*0.5) player.thrustTraveled = player.thrustDist; // 벽/절벽에 막히면 돌진 종료
-        spawnParticles(player.x - player.facing*10, player.y-player.h*0.6, strong?'#ffd27a':'#cfd6dd', 1,1,30,0.25);
+        spawnParticles(player.x - player.facing*10, player.y-player.h*0.6, strong?'#6fb0ff':'#cfd6dd', 1,1,30,0.25);
       }
       // 돌진하는 동안 칼끝 앞쪽에 판정이 계속 유지된다
       if(dashing){
@@ -1432,7 +1470,7 @@
       // 3타: 힘을 모으는 동안 칼끝에 빛이 모이고, 내려치는 순간 앞으로 살짝 내딛는다
       if(step===3){
         if(player.stateTime < def.windup){
-          if(Math.random()<0.5) spawnParticles(player.x - player.facing*8, player.y-player.h-6, '#ffd27a', 1,1,40,0.3);
+          if(Math.random()<0.5) spawnParticles(player.x + player.facing*18, player.y-player.h*0.7, '#7fb8ff', 1,1,40,0.3);
         } else if(player.stateTime - dt < def.windup){
           const desiredX = player.x + player.facing*def.lunge;
           player.x = clampPlayerX(clampHorizontalForCliffs(player.y, player.x, desiredX));
@@ -1505,11 +1543,13 @@
   }
 
   // ---------- 일반 기사(관문 잡몹) AI ----------
+  function gruntReach(g){ return g.type==='brute' ? 58 : g.type==='arm' ? 52 : 48; }
+
   function updateGrunt(g, dt){
     g.stateTime += dt;
     if(g.hurtFlash>0) g.hurtFlash -= dt;
     if(g.state==='dead') return;
-    if(g.dormant) return;   // 방이 봉쇄되기 전까지 제자리에서 기다린다
+    if(g.dormant) return;   // 구역이 잠기기(방이 봉쇄되기) 전까지 제자리에서 기다린다
 
     if(g.state==='hurt'){
       if(g.stateTime>0.3){ g.state='idle'; g.stateTime=0; }
@@ -1518,32 +1558,131 @@
 
     const dx = player.x - g.x;
     const dist = Math.abs(dx);
+    if(g.type==='archer'){ updateArcher(g, dt, dx, dist); return; }
     g.facing = dx<0? -1:1;
 
     if(g.state==='telegraph'){
-      if(g.stateTime>0.55){
-        const reach=46;
+      const tele = g.type==='brute' ? 0.65 : 0.55;
+      if(g.stateTime>tele){
+        const reach = gruntReach(g);
         const hbx = g.facing>0? g.x : g.x-reach;
         const hb = {x:hbx, y:g.y-g.h*0.85, w:reach, h:g.h*0.6};
-        const pb = playerHurtbox();
-        if(rectsOverlap(hb.x,hb.y,hb.w,hb.h,pb.x,pb.y,pb.w,pb.h)){
-          damagePlayer(GRUNT_DAMAGE);
+        if(rectHitsPlayer(hb)) damagePlayer(g.dmg);
+        if(g.type==='brute'){
+          addShake(4);
+          spawnParticles(g.x+g.facing*reach*0.8, g.y-g.h*0.55, '#b48cff', 8,1,110,0.3);
         }
         g.state='recover'; g.stateTime=0;
       }
       return;
     }
     if(g.state==='recover'){
-      if(g.stateTime>0.45){ g.state='idle'; g.stateTime=0; }
+      if(g.stateTime>(g.type==='brute' ? 0.6 : 0.45)){ g.state='idle'; g.stateTime=0; }
       return;
     }
 
     // idle: 플레이어에게 접근하거나, 사거리 안이면 공격을 예고한다
-    if(dist>42){
-      g.x += Math.sign(dx)*130*dt;
+    if(dist > gruntReach(g)-6){
+      g.x += Math.sign(dx)*g.speed*dt;
       g.x = clamp(g.x, g.xMin, g.xMax);
     } else if(g.stateTime>0.3){
       g.state='telegraph'; g.stateTime=0;
+    }
+  }
+
+  // ---- 궁수 기사: 거리를 벌리며 결정 화살을 쏜다 ----
+  function archerAim(g){
+    const ox = g.x + g.facing*16, oy = g.y - g.h*0.62;
+    return {ox, oy, ang: Math.atan2((player.y - player.h*0.5) - oy, player.x - ox)};
+  }
+  function updateArcher(g, dt, dx, dist){
+    g.moving = false;
+    if(g.state==='telegraph'){
+      g.facing = dx<0 ? -1 : 1;
+      if(g.stateTime < ARCHER_TELE*0.7) g.aim = archerAim(g).ang;   // 마지막 30%는 조준 고정
+      if(g.stateTime > ARCHER_TELE){
+        const a = archerAim(g);
+        arrows.push({x:a.ox, y:a.oy, vx:Math.cos(g.aim)*ARROW_SPEED, vy:Math.sin(g.aim)*ARROW_SPEED, ang:g.aim, dist:0, dmg:g.dmg});
+        spawnParticles(a.ox, a.oy, '#c9a2ff', 5,1,80,0.25);
+        g.state='recover'; g.stateTime=0;
+      }
+      return;
+    }
+    if(g.state==='recover'){
+      if(g.stateTime>0.8){ g.state='idle'; g.stateTime=0; }
+      return;
+    }
+    g.facing = dx<0 ? -1 : 1;
+    let move = 0;
+    if(dist<170) move = -Math.sign(dx);
+    else if(dist>380) move = Math.sign(dx);
+    if(move){
+      const nx = clamp(g.x + move*g.speed*dt, g.xMin, g.xMax);
+      g.moving = Math.abs(nx-g.x) > 0.01;
+      g.x = nx;
+    }
+    if(dist<560 && g.stateTime>0.9){
+      g.state='telegraph'; g.stateTime=0;
+      g.aim = archerAim(g).ang;
+    }
+  }
+
+  function updateArrows(dt){
+    for(let i=arrows.length-1;i>=0;i--){
+      const a = arrows[i];
+      const sx = a.vx*dt, sy = a.vy*dt;
+      a.x += sx; a.y += sy; a.dist += Math.hypot(sx, sy);
+      if(Math.random()<0.3) spawnParticles(a.x, a.y, '#b48cff', 1,0.5,20,0.2, 0);
+      const pb = playerHurtbox();
+      const canHit = player.invuln<=0 && player.state!=='dodge' && player.state!=='thrown' && player.state!=='grabbed';
+      if(canHit && a.x>pb.x-3 && a.x<pb.x+pb.w+3 && a.y>pb.y-3 && a.y<pb.y+pb.h+3){
+        damagePlayer(a.dmg);
+        spawnParticles(a.x, a.y, '#c9a2ff', 8,1,100,0.3);
+        arrows.splice(i,1);
+        continue;
+      }
+      const gy = groundSegmentAt(a.x).y;
+      if(a.y >= gy || a.dist > ARROW_RANGE || a.x < 0 || a.x > TUTORIAL_LEVEL_WIDTH || a.y < -50){
+        spawnParticles(a.x, Math.min(a.y, gy-2), '#dbe8f5', 4,1,60,0.25);
+        arrows.splice(i,1);
+      }
+    }
+  }
+
+  // ---- 전투 구역 (얼음벽 잠금) ----
+  function updateLockZones(dt){
+    for(let i=0;i<LOCK_ZONES.length;i++){
+      const z = LOCK_ZONES[i], st = zoneState[i];
+      const members = grunts.filter(g=>g.zone===i);
+      const alive = members.some(g=>g.state!=='dead');
+      if(st.state==='idle'){
+        if(player.x > z.x1+WALL_THICKNESS+40 && player.x < z.x2-WALL_THICKNESS-40){
+          if(alive){
+            st.state='locked'; st.anim=0;
+            for(const g of members){ g.dormant=false; g.stateTime=0; }
+            addShake(8);
+            showBanner(z.name, 700);
+          } else st.state='clear';
+        }
+      } else if(st.state==='locked'){
+        if(st.anim<1){
+          st.anim = Math.min(1, st.anim + dt/0.3);
+          if(st.anim>=1){
+            addShake(12);
+            for(const wx of [z.x1+WALL_THICKNESS/2, z.x2-WALL_THICKNESS/2]){
+              spawnParticles(wx, groundSegmentAt(clamp(wx, z.x1+1, z.x2-1)).y, '#dbeafa', 18,1,160,0.5);
+            }
+          }
+        }
+        if(!alive){
+          st.state='clear';
+          addShake(10);
+          for(const wx of [z.x1+WALL_THICKNESS/2, z.x2-WALL_THICKNESS/2]){
+            for(let k=0;k<7;k++) spawnParticles(wx, 30+k*60, '#bfe3ff', 6,1,170,0.6);
+          }
+          showBanner('얼음벽이 깨졌다', 600);
+        }
+      }
     }
   }
 
@@ -1557,6 +1696,25 @@
     mb.flashTime = 0; mb.stunTime = 0; mb.swingFx = 0; mb.hitByAttackId = -1;
     mb.dormant = true; mb.surface = null; mb.playerSurface = null; mb.skillCount = 0; mb.walking = false;
     mbBlades = []; mbPending = [];
+  }
+
+  function mbPal(){ return (midboss.phase===2 && midboss.state!=='dead') ? MB_RED : MB_PURPLE; }
+  // 결정의 빛 상태 {pal, a: 밝기 0~1}
+  function mbGlowInfo(){
+    const mb = midboss, pulse = 0.5+0.5*Math.sin(performance.now()/220);
+    if(mb.state==='dead'){
+      const t = mb.stateTime;
+      return {pal:MB_PURPLE, a: t<MB_D_GLOW ? 0.3+0.7*t/MB_D_GLOW : 0.85+0.15*pulse};
+    }
+    if(mb.state==='p2trans'){
+      const t = mb.stateTime;
+      if(t < MB_TR_OFF) return {pal:MB_PURPLE, a:Math.max(0, 1 - t/0.06)};
+      const k = t - MB_TR_OFF;
+      if(k < MB_TR_BLINK*6) return {pal:MB_RED, a: Math.floor(k/MB_TR_BLINK)%2===0 ? 1 : 0};
+      return {pal:MB_RED, a:1};
+    }
+    if(mb.phase===2) return {pal:MB_RED, a:0.75+0.25*pulse};
+    return {pal:MB_PURPLE, a:0.45+0.25*pulse};
   }
 
   function mbSpeedMul(){ return midboss.phase===2 ? MB_P2_SPEED : 1; }
@@ -1625,8 +1783,8 @@
 
   // ---- 검기 ----
   function spawnMbBlade(x, y, ang, dmg){
-    mbBlades.push({x, y, ang, vx:Math.cos(ang)*MB_BLADE_SPEED, vy:Math.sin(ang)*MB_BLADE_SPEED, dmg});
-    spawnParticles(x, y, '#c9a2ff', 4,1,90,0.3);
+    mbBlades.push({x, y, ang, vx:Math.cos(ang)*MB_BLADE_SPEED, vy:Math.sin(ang)*MB_BLADE_SPEED, dmg, pal:mbPal()});
+    spawnParticles(x, y, mbPal().soft, 4,1,90,0.3);
   }
   // 검기 판정: 진행 방향에 수직인 길이 MB_BLADE_LEN의 선분 + 두께 MB_BLADE_R
   function bladeHitsPlayer(b){
@@ -1653,15 +1811,15 @@
     for(let i=mbBlades.length-1;i>=0;i--){
       const b = mbBlades[i];
       b.x += b.vx*dt; b.y += b.vy*dt;
-      if(Math.random()<0.5) spawnParticles(b.x, b.y+(Math.random()-0.5)*MB_FX_H*0.7, '#b48cff', 1,0.5,40,0.25);
+      if(Math.random()<0.5) spawnParticles(b.x, b.y+(Math.random()-0.5)*MB_FX_H*0.7, mbPal().soft, 1,0.5,40,0.25);
       if(mbCanHit() && bladeHitsPlayer(b)){
         damagePlayer(b.dmg, true);
-        spawnParticles(b.x, b.y, '#c9a2ff', 10,1,120,0.35);
+        spawnParticles(b.x, b.y, mbPal().soft, 10,1,120,0.35);
         mbBlades.splice(i,1);
         continue;
       }
       if(b.x<MB_ARENA_L || b.x>MB_ARENA_R || b.y>GROUND_Y || b.y<-80){
-        spawnParticles(clamp(b.x,MB_ARENA_L,MB_ARENA_R), Math.min(b.y,GROUND_Y-2), '#b48cff', 10,1,80,0.3);
+        spawnParticles(clamp(b.x,MB_ARENA_L,MB_ARENA_R), Math.min(b.y,GROUND_Y-2), mbPal().soft, 10,1,80,0.3);
         mbBlades.splice(i,1);
       }
     }
@@ -1675,17 +1833,14 @@
     mb.flashTime = 0.12;
     addShake(3);
     spawnParticles(mb.x, mb.y-mb.h*0.6, '#f0d9a0', 6,1,110,0.4);
-    spawnParticles(mb.x, mb.y-mb.h*0.6, '#9b6bff', 4,1,90,0.4);
+    spawnParticles(mb.x, mb.y-mb.h*0.6, mbPal().hex, 4,1,90,0.4);
     addFloatText(mb.x + (Math.random()*36-18), mb.y-mb.h-10, '-'+amount, '#ffd27a', 18);
     if(mb.hp<=0){
       mb.hp = 0;
       if(mb.state==='hop'){ mb.x = mb._hopToX; mb.y = mb._hopToY; }
-      mb.state = 'dead'; mb.stateTime = 0; mb.stunTime = 0;
+      mb.state = 'dead'; mb.stateTime = 0; mb.stunTime = 0; mb.swingFx = 0; mb._shattered = false;
       mbBlades = []; mbPending = [];
-      addShake(12);
-      spawnParticles(mb.x, mb.y-mb.h*0.5, '#9b6bff', 30,1,170,0.9);
-      spawnParticles(mb.x, mb.y-mb.h*0.5, '#9098a2', 16,1,140,0.6);
-      showBanner('수문장이 쓰러졌다', 900);
+      addShake(10);
       return;
     }
     if(mb.phase===1 && mb.hp <= mb.maxHp*0.5) mbEnrage();
@@ -1701,10 +1856,9 @@
     if(mb.state==='grabbing' && player.state==='grabbed'){
       player.state='idle'; player.stateTime=0;
     }
-    mb.state = 'roar'; mb.stateTime = 0; mb.stunTime = 0;
-    showBanner('수문장 각성!', 300);
-    addShake(12);
-    spawnParticles(mb.x, mb.y-mb.h*0.6, '#9b6bff', 30,1,180,1.0);
+    // 게임이 잠깐 멈추고, 결정의 빛이 꺼졌다가 빨갛게 점멸한다 (update에서 진행)
+    mb.state = 'p2trans'; mb.stateTime = 0; mb.stunTime = 0; mb.swingFx = 0;
+    shake = 0;
   }
 
   // K 3단 베기에 맞으면 경직. 공격 예고·돌진 중이면 끊는다. 검기 난무는 저지 불가
@@ -1716,7 +1870,7 @@
       addFloatText(mb.x, mb.y-mb.h-24, '저지 불가', '#ff8a8a', 15);
       return;
     }
-    if(mb.state==='hop' || mb.state==='roar' || mb.state==='grabbing') return;
+    if(mb.state==='hop' || mb.state==='roar' || mb.state==='grabbing' || mb.state==='p2trans') return;
     mb.stunTime = Math.max(mb.stunTime||0, t);
     spawnParticles(mb.x, mb.y-mb.h*0.8, '#eef1f4', 6,1,90,0.3);
     if(MB_INTERRUPTIBLE.includes(mb.state)){
@@ -1804,7 +1958,7 @@
     mb.lastSkill = 'storm';
     mbAim();
     addShake(5);
-    spawnParticles(mb.x, mb.y-mb.h*0.7, '#9b6bff', 18,1,140,0.6);
+    spawnParticles(mb.x, mb.y-mb.h*0.7, mbPal().hex, 18,1,140,0.6);
   }
   function mbStormAngles(n, base){
     const step = (n>=12 ? 10 : 12)*Math.PI/180;
@@ -1835,7 +1989,7 @@
     player.vy = THROW_LIFT;
     player.grounded = false; player.onPlatform = false;
     addShake(10);
-    spawnParticles(player.x, player.y-40, '#9b6bff', 16,1,170,0.5);
+    spawnParticles(player.x, player.y-40, mbPal().hex, 16,1,170,0.5);
   }
 
   function mbToRecover(extra){
@@ -1848,7 +2002,27 @@
     const mb = midboss;
     if(mb.flashTime>0) mb.flashTime -= dt;
     if(mb.swingFx>0) mb.swingFx -= dt;
-    if(mb.state==='dead'){ mb.stateTime += dt; return; }
+    if(mb.state==='dead'){
+      mb.stateTime += dt;
+      const t = mb.stateTime;
+      if(t>MB_D_GLOW && t<MB_D_SHATTER && Math.random()<0.6){
+        spawnParticles(mb.x+(Math.random()-0.5)*50, mb.y-Math.random()*mb.h*1.1, '#c9a2ff', 1,1,40,0.5, -60);
+      }
+      if(t>=MB_D_SHATTER && !mb._shattered){
+        mb._shattered = true;
+        addShake(18);
+        const cx = mb.x, cy = mb.y-mb.h*0.55;
+        spawnParticles(cx, cy, '#c9a2ff', 40,1,330,0.9);
+        spawnParticles(cx, cy, '#ffffff', 14,1,260,0.5);
+        for(let k=0;k<26;k++){
+          const a = Math.random()*Math.PI*2, v = 140+Math.random()*320;
+          particles.push({x:cx+(Math.random()-0.5)*30, y:cy+(Math.random()-0.5)*60, vx:Math.cos(a)*v, vy:Math.sin(a)*v*0.7-160,
+            life:0.7+Math.random()*0.6, maxLife:1.2, color: k%3 ? '#9b6bff' : '#e3d0ff', size:5+Math.random()*5, g:900});
+        }
+        showBanner('수문장이 쓰러졌다', 900);
+      }
+      return;
+    }
     if(mb.dormant || gameOver) return;
 
     // 플레이어가 마지막으로 딛고 선 곳 (점프 중엔 이전 값을 유지)
@@ -1911,7 +2085,7 @@
       if(t>MB_SLASH_TELE){
         mb.swingFx = 0.15;
         addShake(6);
-        spawnParticles(mb.x+mb.facing*55, mb.y-mb.h*0.8, '#e3d0ff', 12,1,140,0.35);
+        spawnParticles(mb.x+mb.facing*55, mb.y-mb.h*0.8, mbPal().pale, 12,1,140,0.35);
         if(mbStrike(mbSlashRect(), mbDmg(MB_SLASH_DMG))){
           mb.state='slash2_tele'; mb.stateTime=0;
         } else {
@@ -1924,7 +2098,7 @@
       if(t>MB_SLASH2_TELE){
         mb.swingFx = 0.15;
         addShake(7);
-        spawnParticles(mb.x+mb.facing*55, mb.y-mb.h*0.8, '#e3d0ff', 12,1,140,0.35);
+        spawnParticles(mb.x+mb.facing*55, mb.y-mb.h*0.8, mbPal().pale, 12,1,140,0.35);
         mbStrike(mbSlashRect(), mbDmg(MB_SLASH_DMG), true);
         mbToRecover(0.1);
       }
@@ -1948,13 +2122,13 @@
     if(st==='thrust_tele'){
       if(t>MB_THRUST_TELE){
         mb.state='thrust_dash'; mb.stateTime=0; mb._thrustHit=false;
-        spawnParticles(mb.x, mb.y-40, '#9b6bff', 10,1,100,0.35);
+        spawnParticles(mb.x, mb.y-40, mbPal().hex, 10,1,100,0.35);
       }
       return;
     }
     if(st==='thrust_dash'){
       const reached = mbMoveToward(mb._thrustTargetX, MB_THRUST_SPEED*mul*dt);
-      spawnParticles(mb.x - mb._thrustDir*14, mb.y-40, '#9b6bff', 1,1,40,0.3);
+      spawnParticles(mb.x - mb._thrustDir*14, mb.y-40, mbPal().hex, 1,1,40,0.3);
       if(!mb._thrustHit && mbStrike(mbStabRect(), mbDmg(MB_THRUST_DMG))) mb._thrustHit = true;
       if((reached && t>0.12) || t>0.6) mbToRecover();
       return;
@@ -1964,13 +2138,13 @@
     if(st==='grab_tele'){
       if(t>GRAB_TELEGRAPH){
         mb.state='grab_dash'; mb.stateTime=0;
-        spawnParticles(mb.x, mb.y-30, '#9b6bff', 10,1,100,0.35);
+        spawnParticles(mb.x, mb.y-30, mbPal().hex, 10,1,100,0.35);
       }
       return;
     }
     if(st==='grab_dash'){
       const reached = mbMoveToward(mb._grabTargetX, CHARGE_SPEED*mul*dt);
-      spawnParticles(mb.x, mb.y-30, '#9b6bff', 1,1,40,0.3);
+      spawnParticles(mb.x, mb.y-30, mbPal().hex, 1,1,40,0.3);
       if(reached || t>0.6){
         const canGrab = player.invuln<=0 && player.state!=='dodge' && player.state!=='grabbed' && player.state!=='thrown';
         if(canGrab && rectHitsPlayer(mbGrabRect())){
@@ -1979,7 +2153,7 @@
           player.x = clampPlayerX(mb.x + mb._grabDir*34);
           player.vy = 0;
           addShake(6);
-          spawnParticles(player.x, player.y-30, '#9b6bff', 10,1,90,0.35);
+          spawnParticles(player.x, player.y-30, mbPal().hex, 10,1,90,0.35);
         } else {
           mbToRecover();
         }
@@ -2021,6 +2195,13 @@
   function updateCamera(dt){
     const lw = currentLevelWidth();
     if(lw <= W){ camera.x = 0; return; }
+    const lz = lockedZone();
+    if(lz){
+      const k = Math.min(1, (dt||0.016)*7);
+      camera.x += (lz.x1 - camera.x)*k;
+      if(Math.abs(lz.x1 - camera.x) < 0.5) camera.x = lz.x1;
+      return;
+    }
     if(stageIndex===0 && arenaSealed){
       // 봉쇄된 방은 보스방처럼 화면 하나에 딱 맞게 고정한다 (부드럽게 이동)
       const k = Math.min(1, (dt||0.016)*7);
@@ -2054,7 +2235,7 @@
   const P1_SHOCK_STUN = 0.5, P1_SHOCK_KNOCK = 230;
 
   // ---- 2페이즈 ----
-  const P2_HP = 700;
+  const P2_HP = 800;
   const DEATH_FALL = 0.8, DEATH_RED = 1.3, DEATH_GONE = 2.9;   // 처치 연출: 쓰러짐 → 붉게 → 가루
   const P2_W = 50, P2_H = 81;                              // 플레이어 키의 1.5배
   const P2_SPEED = 1.3;                                    // 1페이즈보다 30% 빠르다
@@ -2095,7 +2276,36 @@
   const DEBRIS_DMG = 3;
   let bossExitOpen = false;   // 2페이즈 보스를 쓰러뜨리면 오른쪽 벽이 열린다
   // 변신 연출 시간표
-  const TR_RED_IN = 0.35, TR_SWORD = 0.6, TR_SPLIT = 1.05, TR_FADE = 2.15, TR_FADE_LEN = 0.8, TR_END = TR_FADE + PLAT_RISE + 0.15;
+  // 붉은 화면 → 대검이 한번에 튀어나옴(0.1초 정지) → 팔이 튀어나옴 → 반으로 찢고 등장 → 포효하며 발판 상승 → 화면 복귀
+  const TR_RED_IN = 0.35, TR_SWORD = 0.6, TR_ARM = 0.7, TR_SPLIT = 1.12, TR_ROAR = 1.85;
+  const TR_FADE = TR_ROAR + PLAT_RISE, TR_FADE_LEN = 0.8, TR_END = TR_FADE + TR_FADE_LEN;
+  let trBlood = [];   // 변신 연출의 검은 피 {x,y,vx,vy,r,landed}
+  function trRoar(t){ return clamp((t-TR_ROAR)/0.25,0,1) * (1 - clamp((t-TR_FADE+0.15)/0.3,0,1)); }
+  function bloodBurst(x, y, dirX, dirY, n, spd){
+    const base = Math.atan2(dirY, dirX);
+    for(let i=0;i<n;i++){
+      const a = base + (Math.random()-0.5)*1.2;
+      const v = spd*(0.3+Math.random()*0.8);
+      trBlood.push({x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, r:1.5+Math.random()*3.4, landed:false});
+    }
+    if(trBlood.length>700) trBlood.splice(0, trBlood.length-700);
+  }
+  function updateTrBlood(dt){
+    for(const b of trBlood){
+      if(b.landed) continue;
+      b.vy += 1500*dt; b.x += b.vx*dt; b.y += b.vy*dt;
+      if(b.y >= GROUND_Y){ b.y = GROUND_Y; b.landed = true; b.r *= 1.5; }
+    }
+  }
+  function drawTrBlood(){
+    ctx.fillStyle = '#000';
+    for(const b of trBlood){
+      ctx.beginPath();
+      if(b.landed) ctx.ellipse(b.x-camera.x, b.y-1, b.r*1.9, b.r*0.5, 0, 0, Math.PI*2);
+      else ctx.arc(b.x-camera.x, b.y, b.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
 
   function platSolid(p){ return bossPlatformsUp && p.rise>=1 && p.broken<=0 && p.regen>=1; }
   function platformUnder(x, y){
@@ -2317,6 +2527,8 @@
     boss.y = GROUND_Y; boss.vy = 0;
     shockwaves = [];
     phaseBanner.style.transition='none'; phaseBanner.style.opacity='0';
+    boss._trSword = false; boss._trArm = false; boss._trBanner = false;
+    trBlood = [];
     addShake(10);
   }
   function finishTransformSwap(){
@@ -2336,7 +2548,6 @@
     bossPlatformsUp = true;
     addShake(16);
     spawnParticles(boss.x, boss.y-50, FX2, 40,1,200,1.1);
-    showBanner('흑랑 각성!', 900);
   }
 
   // K 3단 베기의 경직. 예고·돌진 중이면 끊는다. 2페이즈의 큰 기술은 저지 불가
@@ -2396,14 +2607,41 @@
     if(!B_FREE.includes(boss.state)) bossGravity(dt);
 
     if(boss.state==='transform'){
-      const t = boss.stateTime;
-      if(boss.phase===1 && t>=TR_SPLIT){ finishTransformSwap(); }
-      if(boss.phase===2 && !bossPlatformsUp && t>=TR_FADE) transformReveal();
-      if(bossPlatformsUp){
-        addShake(4);   // 발판이 올라오는 동안 계속 흔들린다
+      const t = boss.stateTime, f = boss.facing;
+      updateTrBlood(dt);
+      if(boss.phase===1){
+        const cy = boss.y - P1_H*0.55;
+        if(t>=TR_SWORD && !boss._trSword){
+          // 대검이 등을 뚫고 한번에 튀어나온다 - 그대로 0.1초 정지
+          boss._trSword = true;
+          shake = 0;
+          bloodBurst(boss.x - f*8, cy-6, -f*0.7, -1, 50, 560);
+        }
+        if(t>=TR_ARM && !boss._trArm){
+          // 이어서 팔이 가슴을 뚫고 튀어나오며 출혈이 심해진다
+          boss._trArm = true;
+          addShake(20);
+          bloodBurst(boss.x + f*8, cy-4, f, -0.5, 80, 620);
+          bloodBurst(boss.x - f*8, cy, -f*0.5, -1, 34, 440);
+        }
+        if(boss._trArm){
+          bloodBurst(boss.x + (Math.random()-0.5)*18, cy + (Math.random()-0.5)*22, (Math.random()-0.5)*2, -1, 4, 340);
+        }
+        if(t>=TR_SPLIT){
+          // 백양 기사를 반으로 찢고 흑랑이 나온다
+          bloodBurst(boss.x, cy, -1, -0.7, 60, 600);
+          bloodBurst(boss.x, cy, 1, -0.7, 60, 600);
+          finishTransformSwap();
+        }
+      }
+      // 포효: 검은 발판들이 솟아오르고, 전부 올라오면 포효를 멈춘다
+      if(boss.phase===2 && !bossPlatformsUp && t>=TR_ROAR) transformReveal();
+      if(bossPlatformsUp && t<TR_FADE){
+        addShake(5);
         if(Math.random()<0.5) spawnParticles(boss.x+(Math.random()-0.5)*boss.w, boss.y-Math.random()*boss.h, FX2, 1,1,80,0.5);
       }
-      if(t>TR_END){ bToIdle(); boss.aiTimer = 0.5; }
+      if(t>=TR_FADE && !boss._trBanner){ boss._trBanner = true; showBanner('흑랑 각성!', 900); }
+      if(t>TR_END){ bToIdle(); boss.aiTimer = 0.5; trBlood = []; }
       return;
     }
     if(boss.phase===1) updateBossP1(dt);
@@ -2974,7 +3212,185 @@
   }
 
   // ---------- rendering ----------
+  function snowHash(i){ const v = Math.sin(i*127.1+311.7)*43758.5453; return v-Math.floor(v); }
+
+  function drawMountainLayer(par, base, amp, freq, seed, fill, capAlpha){
+    const off = camera.x*par;
+    const pts = [];
+    for(let sx=-15; sx<=W+30; sx+=15){
+      const wx = sx+off;
+      const y = base - amp*(0.55*Math.abs(Math.sin(wx*freq+seed)) + 0.3*Math.abs(Math.sin(wx*freq*2.3+seed*2)) + 0.15*Math.sin(wx*freq*5.1+seed));
+      pts.push([sx,y]);
+    }
+    ctx.beginPath();
+    ctx.moveTo(-15, H);
+    for(const p of pts) ctx.lineTo(p[0], p[1]);
+    ctx.lineTo(W+30, H);
+    ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.strokeStyle = 'rgba(225,236,250,'+capAlpha+')'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    pts.forEach((p,i)=> i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]));
+    ctx.stroke();
+  }
+
+  function drawPine(x, base, h){
+    ctx.fillStyle = '#111824';
+    ctx.fillRect(x-2, base-h*0.22, 4, h*0.22);
+    for(let k=0;k<3;k++){
+      const ty = base - h*(0.15+k*0.27), w = h*(0.3-k*0.07);
+      ctx.fillStyle = '#111824';
+      ctx.beginPath(); ctx.moveTo(x-w, ty); ctx.lineTo(x, ty-h*0.42); ctx.lineTo(x+w, ty); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(214,228,244,0.45)';
+      ctx.beginPath(); ctx.moveTo(x-w*0.35, ty-h*0.27); ctx.lineTo(x, ty-h*0.42); ctx.lineTo(x+w*0.35, ty-h*0.27); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // 지면/발판 위에 쌓인 눈 (월드 좌표)
+  function drawSnowCap(wx1, wx2, y, thick){
+    const sx1 = wx1-camera.x, sx2 = wx2-camera.x;
+    if(sx2 < -20 || sx1 > W+20) return;
+    ctx.fillStyle = '#dde7f2';
+    ctx.beginPath();
+    ctx.moveTo(sx1, y+2);
+    ctx.lineTo(sx1+3, y-3);
+    ctx.lineTo(sx2-3, y-3);
+    ctx.lineTo(sx2, y+2);
+    const start = Math.floor(wx2/12)*12;
+    for(let wx=start; wx>wx1; wx-=12){
+      ctx.lineTo(wx-camera.x, y + thick*(0.5+snowHash(Math.floor(wx/12))*0.9));
+    }
+    ctx.lineTo(sx1, y+thick*0.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillRect(sx1+3, y-3, Math.max(0, sx2-sx1-6), 1.5);
+  }
+
+  function drawSnowBackground(){
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#0b111e');
+    g.addColorStop(0.55,'#1d2a42');
+    g.addColorStop(1,'#3a4a64');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // 달과 달무리 (수문장의 방에서는 수문장의 빛을 따라 물든다)
+    const segs = stageIndex===0 ? GROUND_SEGMENTS : [{x1:0, x2:W, y:GROUND_Y}];
+    let halo;
+    if(stageIndex===1){
+      // 보스방: 1페이즈는 차가운 흰 달빛, 2페이즈는 핏빛 달
+      halo = enraged ? 'rgba(220,40,36,0.3)' : 'rgba(236,240,255,0.3)';
+    } else {
+      const inArena = arenaSealed && player.x >= ARENA_X1;
+      halo = !inArena ? 'rgba(220,232,255,0.26)' : (midboss.phase===2 && midboss.state!=='dead' ? 'rgba(255,90,80,0.24)' : 'rgba(190,160,255,0.22)');
+    }
+    const mx = W*0.72 - camera.x*0.02, my = H*0.2;
+    const mg = ctx.createRadialGradient(mx,my,4,mx,my,180);
+    mg.addColorStop(0, halo);
+    mg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = mg;
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = (stageIndex===1 && enraged) ? 'rgba(235,120,110,0.9)' : 'rgba(236,242,255,0.88)';
+    ctx.beginPath(); ctx.arc(mx, my, 20, 0, Math.PI*2); ctx.fill();
+
+    // 설산 (시차 스크롤)
+    drawMountainLayer(0.06, H*0.5, 160, 0.004, 1.3, '#16203a', 0.45);
+    drawMountainLayer(0.18, H*0.63, 115, 0.0068, 4.1, '#1c2841', 0.35);
+
+    // 침엽수 숲
+    const TW = 660, tp = camera.x*0.45;
+    let bo = -(tp % TW); if(bo > 0) bo -= TW;
+    for(const off of [bo, bo+TW, bo+TW*2]){
+      for(let i=0;i<10;i++){
+        const tx = off + i*66 + snowHash(i)*30;
+        if(tx<-50 || tx>W+50) continue;
+        drawPine(tx, GROUND_Y+20, 60+snowHash(i+9)*80);
+      }
+    }
+    // 지면 가까이 깔린 눈안개
+    const fog = ctx.createLinearGradient(0, GROUND_Y-120, 0, GROUND_Y+20);
+    fog.addColorStop(0,'rgba(170,190,215,0)');
+    fog.addColorStop(1,'rgba(170,190,215,0.22)');
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, GROUND_Y-120, W, 140);
+
+    // 지면
+    for(const seg of segs){
+      const sx1 = seg.x1-camera.x, sx2 = seg.x2-camera.x;
+      if(sx2<-20||sx1>W+20) continue;
+      const gg = ctx.createLinearGradient(0,seg.y,0,H);
+      gg.addColorStop(0,'#2a3446');
+      gg.addColorStop(1,'#0d121b');
+      ctx.fillStyle = gg;
+      ctx.fillRect(sx1, seg.y, sx2-sx1, H-seg.y);
+    }
+    // 높이가 바뀌는 경계 - 얼어붙은 절벽면
+    for(let i=0;stageIndex===0 && i<GROUND_SEGMENTS.length-1;i++){
+      const a = GROUND_SEGMENTS[i], b = GROUND_SEGMENTS[i+1];
+      if(Math.abs(a.y-b.y)<1) continue;
+      if(b.x1===ARENA_FLOOR_X) continue;
+      const topY = Math.min(a.y,b.y), botY = Math.max(a.y,b.y);
+      const bx = a.x2-camera.x;
+      if(bx<-20||bx>W+20) continue;
+      const cg = ctx.createLinearGradient(bx-15,0,bx+15,0);
+      cg.addColorStop(0,'#141a26'); cg.addColorStop(0.5,'#3a4762'); cg.addColorStop(1,'#141a26');
+      ctx.fillStyle = cg;
+      ctx.fillRect(bx-15, topY, 30, botY-topY+6);
+      ctx.strokeStyle = 'rgba(200,225,250,0.35)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(bx-15,topY); ctx.lineTo(bx-15,botY); ctx.moveTo(bx+15,topY); ctx.lineTo(bx+15,botY); ctx.stroke();
+    }
+    for(const seg of segs) drawSnowCap(seg.x1, seg.x2, seg.y, 6);
+  }
+
+  function drawSnowfall(){
+    const t = performance.now()/1000;
+    ctx.save();
+    ctx.fillStyle = '#eef4fb';
+    for(let i=0;i<90;i++){
+      const d = 0.35 + snowHash(i)*0.65;
+      const sp = 22 + d*48;
+      let x = (snowHash(i+100)*(W+40) + Math.sin(t*0.8+i)*14 - camera.x*d*0.6 + t*14*d) % (W+40);
+      if(x < 0) x += W+40;
+      x -= 20;
+      const y = (snowHash(i+200)*(H+20) + t*sp) % (H+20) - 10;
+      ctx.globalAlpha = 0.3+0.5*d;
+      ctx.beginPath(); ctx.arc(x, y, 0.7+d*1.7, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // 전투 구역 얼음벽 (위에서 솟아 내려와 막는다)
+  function drawIceWall(x, anim){
+    const w = WALL_THICKNESS;
+    if(x > W || x+w < 0) return;
+    const e = clamp(anim,0,1), h = (H+10)*e*e;
+    ctx.save();
+    const g = ctx.createLinearGradient(x,0,x+w,0);
+    g.addColorStop(0,'rgba(140,195,240,0.55)');
+    g.addColorStop(0.5,'rgba(215,238,255,0.82)');
+    g.addColorStop(1,'rgba(140,195,240,0.55)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x,0,w,h);
+    ctx.strokeStyle = 'rgba(255,255,255,'+(0.5+0.25*Math.sin(performance.now()/260))+')';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for(let y=24; y<h-20; y+=52){
+      ctx.moveTo(x+6,y); ctx.lineTo(x+w-8,y+18);
+      ctx.moveTo(x+w-6,y+12); ctx.lineTo(x+12,y+36);
+    }
+    ctx.stroke();
+    if(e<1){
+      ctx.fillStyle = 'rgba(235,248,255,0.95)';
+      for(let k=0;k<4;k++){
+        ctx.beginPath(); ctx.moveTo(x+k*10, h); ctx.lineTo(x+k*10+10, h); ctx.lineTo(x+k*10+5, h+9); ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   function drawBackground(){
+    drawSnowBackground(); return;
     const g = ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0, enraged? '#1a0909' : '#140a12');
     g.addColorStop(0.6, enraged? '#2e0f10' : '#241018');
@@ -3208,6 +3624,13 @@
     drawDoor(ARENA_X1-camera.x, arenaSealed ? 'sealed' : (gateOpen ? 'open' : 'closed'));
     // 수문장의 방 출구: 수문장을 처치하면 열린다
     drawDoor(rightX, exitOpen ? 'open' : 'closed', true);
+    // 전투 구역의 얼음벽
+    for(let i=0;i<LOCK_ZONES.length;i++){
+      if(zoneState[i].state!=='locked') continue;
+      const z = LOCK_ZONES[i];
+      drawIceWall(z.x1-camera.x, zoneState[i].anim);
+      drawIceWall(z.x2-WALL_THICKNESS-camera.x, zoneState[i].anim);
+    }
   }
 
   function drawPlatforms(){
@@ -3216,13 +3639,15 @@
       if(sx2 < -20 || sx1 > W+20) continue;
       const w = sx2-sx1;
       const grad = ctx.createLinearGradient(0,p.y,0,p.y+18);
-      grad.addColorStop(0,'#2b2622');
-      grad.addColorStop(1,'#141210');
+      grad.addColorStop(0,'#3d465a');
+      grad.addColorStop(1,'#1a2030');
       ctx.fillStyle = grad;
       ctx.fillRect(sx1, p.y, w, 18);
-      ctx.strokeStyle = 'rgba(216,180,99,0.4)';
-      ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(sx1,p.y+0.5); ctx.lineTo(sx2,p.y+0.5); ctx.stroke();
+      ctx.fillStyle = 'rgba(185,218,246,0.6)';
+      for(let ix=sx1+8; ix<sx2-6; ix+=14){
+        const ih = 4 + snowHash(Math.round(ix+camera.x))*8;
+        ctx.beginPath(); ctx.moveTo(ix-2.5,p.y+18); ctx.lineTo(ix+2.5,p.y+18); ctx.lineTo(ix,p.y+18+ih); ctx.closePath(); ctx.fill();
+      }
       const floorY = groundSegmentAt((p.x1+p.x2)/2).y;
       ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.fillRect(sx1+4, p.y+18, Math.max(0,w-8), Math.max(0, floorY-(p.y+18)));
@@ -3231,20 +3656,21 @@
         for(const px of p.pillars){
           const cx = px-camera.x;
           const pg = ctx.createLinearGradient(cx-9,0,cx+9,0);
-          pg.addColorStop(0,'#141110'); pg.addColorStop(0.5,'#2a2420'); pg.addColorStop(1,'#141110');
+          pg.addColorStop(0,'#151b27'); pg.addColorStop(0.5,'#33405a'); pg.addColorStop(1,'#151b27');
           ctx.fillStyle = pg;
           ctx.fillRect(cx-9, p.y+18, 18, floorY-(p.y+18));
-          ctx.fillStyle = '#2b2622';
+          ctx.fillStyle = '#3d465a';
           ctx.fillRect(cx-13, floorY-6, 26, 6);
           ctx.fillRect(cx-13, p.y+18, 26, 5);
         }
       }
     }
+    for(const p of PLATFORMS) drawSnowCap(p.x1, p.x2, p.y, 4);
     // 구역 이름
     ctx.save();
     ctx.font = '13px Georgia';
     ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(216,180,99,0.28)';
+    ctx.fillStyle = 'rgba(220,234,250,0.38)';
     for(const z of ZONE_LABELS){
       const zx = z.x-camera.x;
       if(zx<-150||zx>W+20) continue;
@@ -3260,14 +3686,16 @@
       ctx.save();
       ctx.translate(sx, groundSegmentAt(d.x).y);
       ctx.scale(d.s,d.s);
-      ctx.fillStyle = '#181412';
+      ctx.fillStyle = '#2a3243';
       ctx.beginPath();
       ctx.moveTo(-18,0); ctx.lineTo(-11,-15); ctx.lineTo(3,-11); ctx.lineTo(14,-3); ctx.lineTo(19,0);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = 'rgba(216,180,99,0.2)';
+      ctx.strokeStyle = 'rgba(220,235,250,0.35)';
       ctx.lineWidth = 1;
       ctx.stroke();
+      ctx.fillStyle = '#e3ecf6';
+      ctx.beginPath(); ctx.moveTo(-14,-10); ctx.lineTo(-11,-15); ctx.lineTo(3,-11); ctx.lineTo(10,-6); ctx.quadraticCurveTo(-1,-9,-14,-10); ctx.closePath(); ctx.fill();
       ctx.restore();
     }
   }
@@ -3367,6 +3795,61 @@
     }
   }
 
+  // 찌르기 강공격(강찌르기)과 3단 베기의 강공격(3타)에서는 칼날이 푸른 불꽃 롱소드로 변한다
+  function playerFlameMode(){
+    if(player.state==='thrust' && player.thrustStrong) return true;
+    if(player.state==='thrust_charge' && player.stateTime>=THRUST_CHARGE_TIME) return true;
+    if(player.state==='combo' && player.comboStep===3) return true;
+    return false;
+  }
+  function drawSwordHilt(){
+    ctx.fillStyle='#5a3d24'; ctx.fillRect(-9,-1.8,9,3.6);
+    ctx.fillStyle='#b8954e'; ctx.beginPath(); ctx.arc(-10,0,2.6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#7d838c'; ctx.fillRect(-1,-6,3.5,12);
+  }
+  // 부러진 롱소드 같은 단도
+  function drawBrokenBlade(){
+    drawSwordHilt();
+    ctx.fillStyle='#cfd6dd';
+    ctx.beginPath();
+    ctx.moveTo(2.5,-3); ctx.lineTo(18,-3); ctx.lineTo(21,-0.5); ctx.lineTo(17.5,0.6); ctx.lineTo(20.5,2.2); ctx.lineTo(15,3); ctx.lineTo(2.5,3);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#5d636b'; ctx.lineWidth=0.8; ctx.stroke();
+    ctx.strokeStyle='rgba(95,100,110,0.8)';
+    ctx.beginPath(); ctx.moveTo(4,0); ctx.lineTo(14,0); ctx.stroke();
+  }
+  // 불타는 듯한 푸른 롱소드 날
+  function drawFlameBlade(){
+    const tm = performance.now()/55, L = 48;
+    drawSwordHilt();
+    ctx.save();
+    ctx.shadowColor='#3d8bff'; ctx.shadowBlur=16;
+    const flame = (wMax, amp, col)=>{
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(2.5,-wMax*0.7);
+      for(let i=1;i<=10;i++){
+        const x = 2.5+(L-2.5)*i/10, w = wMax*(1-i/12);
+        ctx.lineTo(x, -w - amp*Math.abs(Math.sin(tm+i*1.9)));
+      }
+      ctx.lineTo(L+8+amp*Math.sin(tm*1.7), 0);
+      for(let i=10;i>=1;i--){
+        const x = 2.5+(L-2.5)*i/10, w = wMax*(1-i/12);
+        ctx.lineTo(x, w + amp*0.7*Math.abs(Math.sin(tm*1.3+i*2.3)));
+      }
+      ctx.lineTo(2.5, wMax*0.7);
+      ctx.closePath(); ctx.fill();
+    };
+    flame(7.5, 4, 'rgba(40,110,255,0.5)');
+    flame(4.8, 2.4, 'rgba(110,185,255,0.8)');
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = '#eef8ff';
+    ctx.beginPath();
+    ctx.moveTo(2.5,-1.8); ctx.lineTo(L,-1.1); ctx.lineTo(L+5,0); ctx.lineTo(L,1.1); ctx.lineTo(2.5,1.8);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
   function drawPlayer(){
     ctx.save();
     let flicker = (player.invuln>0 && player.state!=='dead' && Math.floor(player.stateTime*20)%2===0);
@@ -3388,49 +3871,86 @@
     ctx.fill();
 
     if(player.state==='thrown'){
-      // 내던져지는 동안 몸이 뒤로 회전한다
       ctx.translate(0,-27);
       ctx.rotate(-player.stateTime*14);
       ctx.translate(0,27);
     }
 
-    let bob = 0;
-    if(player.state==='run' && player.grounded) bob = Math.sin(performance.now()/70)*4;
+    const now = performance.now();
+    const running = player.state==='run' && player.grounded;
+    const sw = running ? Math.sin(now/60)*5 : 0;
+    const bob = running ? -Math.abs(Math.sin(now/60))*1.5 : 0;
+    const navy='#1f2d78', navyDk='#121a4a', neck='#5468d4', neckDk='#3a4aa6';
+    const pants='#e2ddd1', pantsDk='#b9b3a5', plate='#959ca6', plateDk='#646b75', edge='#24272d';
+    ctx.lineJoin='round';
 
-    ctx.strokeStyle='#5a4636'; ctx.lineWidth=6; ctx.lineCap='round';
-    if(!player.grounded){
-      // 공중 자세 - 다리를 살짝 접어올린다
+    // ---- 다리: 통바지 + 무릎 아래 판금 정강이 + 뾰족한 철화 ----
+    const leg = (hx, off, back)=>{
+      let kx = hx + off*0.5, ky = -14, ax = hx + off, ay = -3;
+      if(!player.grounded){ kx = hx + (back ? 1 : 6); ky = -16; ax = hx + (back ? -4 : 3); ay = -7; }
+      const pc = back ? plateDk : plate;
+      ctx.strokeStyle = pc; ctx.lineWidth = 5; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(kx,ky); ctx.lineTo(ax,ay); ctx.stroke();
+      ctx.fillStyle = pc; ctx.strokeStyle = edge; ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(-6,-24); ctx.lineTo(-10,-8);
-      ctx.moveTo(6,-24); ctx.lineTo(11,-9);
-      ctx.stroke();
-    } else {
+      ctx.moveTo(ax-4,ay-2); ctx.lineTo(ax+3,ay-3); ctx.lineTo(ax+11,ay+3); ctx.lineTo(ax-4,ay+3);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle='rgba(30,32,38,0.6)';
+      ctx.beginPath(); ctx.moveTo(ax+1,ay-2.5); ctx.lineTo(ax+1,ay+3); ctx.moveTo(ax+5,ay-0.5); ctx.lineTo(ax+5,ay+3); ctx.stroke();
+      ctx.fillStyle = pc; ctx.fillRect(kx-4.5, ky-2, 9, 5);
+      ctx.fillStyle = back ? pantsDk : pants; ctx.strokeStyle = edge; ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(-6,-24); ctx.lineTo(-8+Math.sin(performance.now()/60)*4*(player.state==='run'?1:0), 0);
-      ctx.moveTo(6,-24); ctx.lineTo(8-Math.sin(performance.now()/60)*4*(player.state==='run'?1:0), 0);
-      ctx.stroke();
-    }
+      ctx.moveTo(hx-5,-31);
+      ctx.lineTo(hx+5,-31);
+      ctx.quadraticCurveTo(kx+11, (ky-31)/2, kx+5, ky);
+      ctx.lineTo(kx-6, ky);
+      ctx.quadraticCurveTo(kx-10, (ky-31)/2, hx-5, -31);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    };
+    leg(-3, -sw, true);
+    leg(4, sw, false);
 
-    ctx.fillStyle='#2e2430';
+    // 허리띠
+    ctx.fillStyle='#2c2a30'; ctx.fillRect(-9,-34+bob,18,4);
+    // 뒤쪽 팔 (판금)
+    ctx.strokeStyle=plateDk; ctx.lineWidth=5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(-6,-43+bob); ctx.lineTo(-11,-31+bob); ctx.stroke();
+    ctx.fillStyle=plateDk; ctx.beginPath(); ctx.arc(-11.5,-30+bob,3,0,Math.PI*2); ctx.fill();
+    // 몸통
+    ctx.fillStyle='#2b2f3a'; ctx.beginPath(); ctx.roundRect(-9,-46+bob,18,13,3); ctx.fill();
+
+    // 군청색 케이프
+    const flut = running ? -3 + Math.sin(now/70)*2 : (player.grounded ? 0 : -2);
+    ctx.fillStyle=navy; ctx.strokeStyle=navyDk; ctx.lineWidth=1.2;
     ctx.beginPath();
-    ctx.moveTo(-16,-24+bob*0.2);
-    ctx.lineTo(16,-24+bob*0.2);
-    ctx.lineTo(12,-52);
-    ctx.lineTo(-12,-52);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle='#d8b899';
+    ctx.moveTo(-6,-49+bob); ctx.lineTo(6,-49+bob);
+    ctx.lineTo(13,-42+bob); ctx.lineTo(12,-31+bob); ctx.lineTo(1,-27+bob);
+    ctx.lineTo(-13+flut,-30+bob); ctx.lineTo(-14+flut,-42+bob);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle='rgba(140,160,255,0.28)'; ctx.lineWidth=1;
     ctx.beginPath();
-    ctx.arc(0,-58,9,0,Math.PI*2);
-    ctx.fill();
+    for(let i=0;i<5;i++){ const sx=-9+i*5; ctx.moveTo(sx,-44+bob); ctx.lineTo(sx-2,-32+bob); }
+    ctx.stroke();
 
-    ctx.fillStyle='#3c2c2c';
-    ctx.beginPath();
-    ctx.arc(0,-60,10,Math.PI*0.9,Math.PI*2.1);
-    ctx.fill();
+    // 자물쇠 투구
+    const hb = -52+bob;
+    ctx.lineCap='butt';
+    const shackle = ()=>{ ctx.beginPath(); ctx.moveTo(-4.5,hb-13); ctx.lineTo(-4.5,hb-17); ctx.arc(0,hb-17,4.5,Math.PI,0); ctx.lineTo(4.5,hb-15); ctx.stroke(); };
+    ctx.strokeStyle=edge; ctx.lineWidth=4.5; shackle();
+    ctx.strokeStyle='#c7ccd2'; ctx.lineWidth=2.5; shackle();
+    ctx.fillStyle='#d6d9de'; ctx.strokeStyle=edge; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.roundRect(-8,hb-14,16,14,2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#eef0f3'; ctx.fillRect(2,hb-13,5,12);
+    ctx.fillStyle='#0b0b0e';
+    ctx.beginPath(); ctx.arc(4.5,hb-9,2.2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(3.4,hb-8.5); ctx.lineTo(5.6,hb-8.5); ctx.lineTo(6.3,hb-3); ctx.lineTo(2.7,hb-3); ctx.closePath(); ctx.fill();
 
-    ctx.strokeStyle='#d8b899'; ctx.lineWidth=5; ctx.lineCap='round';
+    // 넥 워머 (케이프보다 밝은 파랑)
+    ctx.fillStyle=neck; ctx.strokeStyle=neckDk; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(-8.5,-54+bob,17,7,3); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-7,-50.5+bob); ctx.lineTo(7,-50.5+bob); ctx.stroke();
+
+    // ---- 칼 든 팔 ----
     let armAngle = -0.3;
     let swordAngle = -0.5;
     if(player.state==='attack'){
@@ -3439,40 +3959,39 @@
       armAngle = -0.3 - swing*1.6;
       swordAngle = armAngle - 0.4;
     } else if(player.state==='thrust_charge'){
-      // 칼을 뒤로 당겨 수평으로 겨눈다
       armAngle = 2.6; swordAngle = 0;
     } else if(player.state==='thrust'){
-      // 팔을 곧게 뻗어 찌른다
       armAngle = 0; swordAngle = 0;
     } else if(player.state==='combo'){
       const def = COMBO_STEPS[player.comboStep];
       if(player.comboStep===1){
         const e = clamp(player.stateTime/(def.hitEnd+0.03),0,1);
-        armAngle = -1.9 + e*2.3;                 // 위에서 아래로
+        armAngle = -1.9 + e*2.3;
       } else if(player.comboStep===2){
         const e = clamp(player.stateTime/(def.hitEnd+0.03),0,1);
-        armAngle = 0.4 - e*2.3;                  // 아래에서 위로 되베기
+        armAngle = 0.4 - e*2.3;
       } else {
         if(player.stateTime < def.windup){
           const w = clamp(player.stateTime/def.windup,0,1);
-          armAngle = -0.3 - w*2.1;               // 머리 위로 크게 치켜든다
+          armAngle = -0.3 - w*2.1;
         } else {
           const e = clamp((player.stateTime-def.windup)/(def.hitEnd-def.windup),0,1);
-          armAngle = -2.4 + e*3.0;               // 힘껏 내려친다
+          armAngle = -2.4 + e*3.0;
         }
       }
       swordAngle = armAngle - 0.3;
     }
-    const shoulderX=10, shoulderY=-46;
-    const armLen = player.state==='thrust' ? 22 : 20;
+    const shoulderX=9, shoulderY=-45+bob;
+    const armLen = player.state==='thrust' ? 20 : 17;
     const handX = shoulderX + Math.cos(armAngle)*armLen;
     const handY = shoulderY + Math.sin(armAngle)*armLen;
-    ctx.beginPath();
-    ctx.moveTo(shoulderX,shoulderY);
-    ctx.lineTo(handX,handY);
-    ctx.stroke();
+    ctx.lineCap='round';
+    ctx.strokeStyle=edge; ctx.lineWidth=6.5;
+    ctx.beginPath(); ctx.moveTo(shoulderX,shoulderY); ctx.lineTo(handX,handY); ctx.stroke();
+    ctx.strokeStyle=plate; ctx.lineWidth=4.5;
+    ctx.beginPath(); ctx.moveTo(shoulderX,shoulderY); ctx.lineTo(handX,handY); ctx.stroke();
 
-    // 평타 판정 중엔 늘어난 사거리만큼 칼바람 궤적을 남긴다
+    // 평타 칼바람 궤적
     if(player.state==='attack' && player.stateTime>0.12 && player.stateTime<0.30){
       ctx.save();
       ctx.globalAlpha = 0.4 * (1 - (player.stateTime-0.12)/0.18);
@@ -3483,16 +4002,16 @@
       ctx.stroke();
       ctx.restore();
     }
-
-    // 3단 베기 판정 중엔 칼이 지나간 자리에 궤적을 남긴다
+    // 3단 베기 궤적 (3타는 푸른 불꽃)
     if(player.state==='combo'){
       const def = COMBO_STEPS[player.comboStep];
       if(player.stateTime>def.hitStart && player.stateTime<def.hitEnd+0.05){
         const big = player.comboStep===3;
         ctx.save();
-        ctx.globalAlpha = 0.55;
-        ctx.strokeStyle = big ? '#ffd27a' : '#eaf6ff';
-        ctx.lineWidth = big ? 6 : 3;
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = big ? '#7fb8ff' : '#eaf6ff';
+        if(big){ ctx.shadowColor='#3d8bff'; ctx.shadowBlur=14; }
+        ctx.lineWidth = big ? 7 : 3;
         ctx.beginPath();
         if(player.comboStep===2) ctx.arc(shoulderX, shoulderY, def.reach-6, 0.9, -1.4, true);
         else ctx.arc(shoulderX, shoulderY, def.reach-6, -1.4, 0.9);
@@ -3501,35 +4020,29 @@
       }
     }
 
+    const flameMode = playerFlameMode();
     ctx.save();
     ctx.translate(handX,handY);
     ctx.rotate(swordAngle);
-    // 찌르기 돌진 중엔 칼끝 앞으로 잔상이 뻗는다
     if(player.state==='thrust' && player.thrustTraveled < player.thrustDist){
       ctx.globalAlpha = 0.45;
-      ctx.fillStyle = player.thrustStrong ? '#ffd27a' : '#eaf6ff';
+      ctx.fillStyle = player.thrustStrong ? '#7fb8ff' : '#eaf6ff';
       ctx.fillRect(-30,-1.5,30,3);
       ctx.globalAlpha = 1;
     }
-    ctx.fillStyle='#cfd6dd';
-    ctx.fillRect(0,-2,42,4);
-    ctx.fillStyle='#8a6a3a';
-    ctx.fillRect(-6,-3,6,6);
-    // 힘이 다 모이면 칼날이 금빛으로 빛난다
-    if(player.state==='thrust_charge' || (player.state==='thrust' && player.thrustStrong)){
-      const ready = player.state==='thrust' || player.stateTime>=THRUST_CHARGE_TIME*0.999;
-      const p = player.state==='thrust' ? 1 : clamp(player.stateTime/THRUST_CHARGE_TIME,0,1);
-      ctx.globalAlpha = ready ? 0.9 : 0.25+0.45*p;
-      ctx.fillStyle = '#ffd27a';
-      ctx.fillRect(0,-2,42*p,4);
+    if(flameMode) drawFlameBlade();
+    else drawBrokenBlade();
+    // 힘을 모으는 동안 부러진 칼날에 푸른 불씨가 붙는다
+    if(player.state==='thrust_charge' && !flameMode){
+      const p = clamp(player.stateTime/THRUST_CHARGE_TIME,0,1);
+      ctx.globalAlpha = 0.25+0.5*p;
+      ctx.fillStyle = '#7fb8ff';
+      ctx.fillRect(2.5,-3,18*p,6);
       ctx.globalAlpha = 1;
     }
     ctx.restore();
-
-    ctx.beginPath();
-    ctx.moveTo(-10,-46);
-    ctx.lineTo(-18,-30);
-    ctx.stroke();
+    // 건틀릿
+    ctx.fillStyle=plateDk; ctx.beginPath(); ctx.arc(handX,handY,3,0,Math.PI*2); ctx.fill();
 
     ctx.restore();
 
@@ -3537,17 +4050,32 @@
     if(player.state==='thrust_charge'){
       const p = clamp(player.stateTime/THRUST_CHARGE_TIME,0,1);
       const gw = 36, gh = 4;
-      const gx = player.x-camera.x-gw/2, gy = player.y-player.h-20;
+      const gx = player.x-camera.x-gw/2, gy = player.y-player.h-24;
       ctx.save();
       ctx.fillStyle='rgba(0,0,0,0.6)';
       ctx.fillRect(gx-1,gy-1,gw+2,gh+2);
-      ctx.fillStyle = p>=1 ? '#fff1c4' : '#d8b463';
+      ctx.fillStyle = p>=1 ? '#d8eeff' : '#5aa0ff';
       ctx.fillRect(gx,gy,gw*p,gh);
       ctx.restore();
     }
   }
 
   // ---------- 일반 기사(잡몹) 렌더링 ----------
+  function gCrystal(x,y,ang,len,w){
+    const c=Math.cos(ang), sn=Math.sin(ang), px=-sn*w/2, py=c*w/2;
+    ctx.beginPath();
+    ctx.moveTo(x-c*len*0.15, y-sn*len*0.15);
+    ctx.lineTo(x+c*len*0.3+px, y+sn*len*0.3+py);
+    ctx.lineTo(x+c*len, y+sn*len);
+    ctx.lineTo(x+c*len*0.3-px, y+sn*len*0.3-py);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  function gCrystalStyle(){
+    ctx.fillStyle='rgba(170,120,255,0.92)'; ctx.strokeStyle='#ece2ff'; ctx.lineWidth=0.8;
+    ctx.shadowColor='#9b6bff'; ctx.shadowBlur=7;
+  }
+  function gCrystalEnd(){ ctx.shadowBlur=0; }
+
   function drawGrunt(g){
     if(g.state==='dead' && g.stateTime>0.5) return;
     ctx.save();
@@ -3561,44 +4089,204 @@
     ctx.fillStyle='rgba(0,0,0,0.4)';
     ctx.beginPath(); ctx.ellipse(0,3,15,5,0,0,Math.PI*2); ctx.fill();
 
-    const steel = '#565a62', steelDark='#33363d';
+    const T = g.type;
+    const steel='#565a62', steelDark='#33363d', flesh='#3b2153', fleshHi='#5d3a86', fleshDk='#24132f';
+    const now = performance.now();
+    const moving = !g.dormant && g.state==='idle' && (T==='archer' ? g.moving : Math.abs(player.x-g.x) > gruntReach(g)-6);
+    const walk = moving ? Math.sin(now/85 + g.x*0.01)*4 : 0;
+    ctx.lineCap='round'; ctx.lineJoin='round';
 
-    ctx.fillStyle = steelDark;
-    ctx.fillRect(-8,-28,7,28);
-    ctx.fillRect(1,-28,7,28);
-
-    ctx.fillStyle = steel;
-    ctx.beginPath(); ctx.roundRect(-10,-56,20,28,5); ctx.fill();
-
-    let swordAngle=-0.4;
-    if(g.state==='telegraph'){
-      const t=clamp(g.stateTime/0.55,0,1);
-      swordAngle = -0.4 - t*1.7;
-    } else if(g.state==='recover' && g.stateTime<0.12){
-      const t=clamp(g.stateTime/0.12,0,1);
-      swordAngle = -2.1 + t*1.7;
+    // ---- 다리 ----
+    if(T==='archer'){
+      // 3. 기괴하게 변형된 역관절 다리
+      for(const [hx,off,col] of [[-4,-walk,fleshDk],[4,walk,flesh]]){
+        ctx.strokeStyle=col; ctx.lineWidth=7;
+        ctx.beginPath(); ctx.moveTo(hx,-28); ctx.lineTo(hx+8+off,-17); ctx.lineTo(hx-4+off,-6); ctx.lineTo(hx+4+off,0); ctx.stroke();
+        ctx.strokeStyle=fleshHi; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(hx+1,-25); ctx.lineTo(hx+6+off,-18); ctx.stroke();
+      }
+      gCrystalStyle();
+      gCrystal(12+walk,-17,-0.5,8,4);
+      gCrystal(4-walk,-18,-2.4,7,3.5);
+      gCrystal(1+walk,-8,0.4,5,3);
+      gCrystalEnd();
+    } else {
+      ctx.fillStyle=steelDark;
+      ctx.fillRect(-8+walk*0.5,-28,7,28);
+      ctx.fillRect(1-walk*0.5,-28,7,28);
     }
-    const shX=8, shY=-50;
-    const handX=shX+Math.sin(swordAngle)*17, handY=shY+Math.cos(swordAngle)*17;
-    ctx.strokeStyle=steelDark; ctx.lineWidth=5; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(shX,shY); ctx.lineTo(handX,handY); ctx.stroke();
-    ctx.save();
-    ctx.translate(handX,handY); ctx.rotate(swordAngle);
-    ctx.fillStyle='#cfd6dd'; ctx.fillRect(0,-2,24,3);
-    ctx.fillStyle='#8a6a3a'; ctx.fillRect(-4,-3,5,5);
-    ctx.restore();
 
-    ctx.strokeStyle=steel; ctx.lineWidth=5; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(-8,-50); ctx.lineTo(-13,-38); ctx.stroke();
-    ctx.fillStyle=steelDark;
-    ctx.beginPath(); ctx.roundRect(-18,-44,9,15,3); ctx.fill();
+    // ---- 몸통 ----
+    if(T==='brute'){
+      // 4. 상반신 전체가 부풀어 오른 근육 덩어리로 변형
+      ctx.fillStyle=flesh;
+      ctx.beginPath(); ctx.ellipse(0,-42,15,17,0.2,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=fleshHi;
+      ctx.beginPath(); ctx.ellipse(5,-48,7,6,0.3,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-6,-50,6,5,-0.3,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=fleshDk; ctx.lineWidth=1.2;
+      ctx.beginPath();
+      ctx.moveTo(-8,-38); ctx.quadraticCurveTo(-2,-44,4,-36);
+      ctx.moveTo(-10,-30); ctx.quadraticCurveTo(0,-34,8,-28);
+      ctx.stroke();
+      ctx.fillStyle=steel;   // 깨져 매달린 흉갑 조각
+      ctx.beginPath(); ctx.moveTo(-13,-34); ctx.lineTo(-2,-31); ctx.lineTo(-5,-25); ctx.lineTo(-14,-27); ctx.closePath(); ctx.fill();
+    } else {
+      ctx.fillStyle=steel;
+      ctx.beginPath(); ctx.roundRect(-10,-56,20,28,5); ctx.fill();
+      ctx.strokeStyle='rgba(20,22,26,0.5)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(-9,-42); ctx.lineTo(9,-42); ctx.stroke();
+    }
 
+    // ---- 반대쪽 팔 ----
+    if(T==='crystal' || T==='arm'){
+      ctx.strokeStyle=steel; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.moveTo(-8,-50); ctx.lineTo(-13,-38); ctx.stroke();
+      ctx.fillStyle=steelDark;
+      ctx.beginPath(); ctx.roundRect(-18,-44,9,15,3); ctx.fill();
+    } else if(T==='brute'){
+      ctx.strokeStyle=steelDark; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.moveTo(-9,-48); ctx.lineTo(-14,-32); ctx.stroke();
+    }
+
+    // ---- 무기 ----
+    if(T==='archer'){
+      // 결정이 돋은 활
+      const tele = g.state==='telegraph';
+      const pull = tele ? clamp(g.stateTime/ARCHER_TELE,0,1) : 0;
+      let la = 0.25;
+      if(tele) la = clamp(Math.atan2(Math.sin(g.aim), g.facing*Math.cos(g.aim)), -1.3, 1.3);
+      ctx.save();
+      ctx.translate(4,-46); ctx.rotate(la);
+      ctx.strokeStyle=steelDark; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(12,0); ctx.stroke();
+      ctx.strokeStyle='#4a3560'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(4,0,13,-1.15,1.15); ctx.stroke();
+      const tipX = 4+13*Math.cos(1.15), tipY = 13*Math.sin(1.15);
+      const sx = tipX - pull*11;
+      ctx.strokeStyle='rgba(230,230,240,0.85)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(tipX,-tipY); ctx.lineTo(sx,0); ctx.lineTo(tipX,tipY); ctx.stroke();
+      if(tele){
+        ctx.strokeStyle='#cfc6b8'; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx+22,0); ctx.stroke();
+        gCrystalStyle(); gCrystal(sx+21,0,0,6,3.5); gCrystalEnd();
+        ctx.strokeStyle=steelDark; ctx.lineWidth=4;
+        ctx.beginPath(); ctx.moveTo(-8,4); ctx.lineTo(sx,0); ctx.stroke();
+      }
+      gCrystalStyle();
+      gCrystal(17,0,0,7,4.5);
+      gCrystal(tipX,-tipY,-1.9,6,3.5);
+      gCrystal(tipX,tipY,1.9,6,3.5);
+      gCrystalEnd();
+      ctx.restore();
+    } else if(T==='brute'){
+      // 칼 대신 비대해진 팔 + 결정 돋은 주먹
+      let aa = 0.95;
+      const punching = g.state==='recover' && g.stateTime<0.18;
+      if(g.state==='telegraph') aa = 0.95 + (-2.3-0.95)*clamp(g.stateTime/0.65,0,1);
+      else if(punching) aa = -2.3 + 2.3*clamp(g.stateTime/0.08,0,1);
+      const shX=6, shY=-50;
+      const ex = shX+Math.cos(aa)*15, ey = shY+Math.sin(aa)*15;
+      const fa = aa + (punching ? 0 : 0.5);
+      const fx = ex+Math.cos(fa)*15, fy = ey+Math.sin(fa)*15;
+      ctx.strokeStyle=fleshDk; ctx.lineWidth=15;
+      ctx.beginPath(); ctx.moveTo(shX,shY); ctx.lineTo(ex,ey); ctx.lineTo(fx,fy); ctx.stroke();
+      ctx.strokeStyle=flesh; ctx.lineWidth=11;
+      ctx.beginPath(); ctx.moveTo(shX,shY); ctx.lineTo(ex,ey); ctx.lineTo(fx,fy); ctx.stroke();
+      ctx.strokeStyle=fleshHi; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.moveTo(shX,shY-3); ctx.lineTo(ex,ey-3); ctx.stroke();
+      ctx.fillStyle=flesh; ctx.strokeStyle=fleshDk; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(fx,fy,10,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      gCrystalStyle();
+      for(let i=-1;i<=1;i++) gCrystal(fx+Math.cos(fa+i*0.6)*8, fy+Math.sin(fa+i*0.6)*8, fa+i*0.6, 8, 4);
+      gCrystalEnd();
+    } else {
+      // 1, 2: 롱소드
+      let swordAngle=-0.4;
+      if(g.state==='telegraph'){ const t=clamp(g.stateTime/0.55,0,1); swordAngle = -0.4 - t*1.7; }
+      else if(g.state==='recover' && g.stateTime<0.12){ const t=clamp(g.stateTime/0.12,0,1); swordAngle = -2.1 + t*1.7; }
+      const shX=8, shY=-50;
+      const handX=shX+Math.sin(swordAngle)*17, handY=shY+Math.cos(swordAngle)*17;
+      if(T==='arm'){
+        // 2. 어두운 보랏빛으로 기괴하게 변형된 팔
+        const mx=(shX+handX)/2+4, my=(shY+handY)/2-3;
+        ctx.strokeStyle=fleshDk; ctx.lineWidth=9;
+        ctx.beginPath(); ctx.moveTo(shX,shY); ctx.quadraticCurveTo(mx,my,handX,handY); ctx.stroke();
+        ctx.strokeStyle=flesh; ctx.lineWidth=6;
+        ctx.beginPath(); ctx.moveTo(shX,shY); ctx.quadraticCurveTo(mx,my,handX,handY); ctx.stroke();
+        ctx.fillStyle=fleshHi; ctx.beginPath(); ctx.arc(mx-1,my+1,2.5,0,Math.PI*2); ctx.fill();
+      } else {
+        ctx.strokeStyle=steelDark; ctx.lineWidth=5;
+        ctx.beginPath(); ctx.moveTo(shX,shY); ctx.lineTo(handX,handY); ctx.stroke();
+      }
+      ctx.save();
+      ctx.translate(handX,handY); ctx.rotate(swordAngle);
+      if(T==='arm'){
+        ctx.shadowColor='#9b6bff'; ctx.shadowBlur=8;
+        ctx.fillStyle='#6a3fb0';
+        ctx.beginPath(); ctx.moveTo(0,-2.5); ctx.lineTo(14,-3.8); ctx.lineTo(24,-1.5); ctx.lineTo(34,0); ctx.lineTo(22,2.6); ctx.lineTo(0,2); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle='#c9a2ff'; ctx.lineWidth=1; ctx.stroke();
+        ctx.shadowBlur=0;
+        ctx.fillStyle=fleshDk; ctx.fillRect(-5,-3,5,6);
+      } else {
+        ctx.fillStyle='#cfd6dd'; ctx.fillRect(0,-2,31,3.5);
+        ctx.beginPath(); ctx.moveTo(31,-2); ctx.lineTo(35,-0.3); ctx.lineTo(31,1.5); ctx.closePath(); ctx.fill();
+        ctx.fillStyle='#7d838c'; ctx.fillRect(-1,-5,3,10);
+        ctx.fillStyle='#8a6a3a'; ctx.fillRect(-6,-1.5,5,3);
+      }
+      ctx.restore();
+      if(T==='arm'){
+        // 팔과 몸이 이어지는 부위의 작은 결정 3개
+        gCrystalStyle();
+        gCrystal(10,-53,-1.2,6,3.5); gCrystal(13,-50,-0.4,5,3); gCrystal(6,-55,-1.9,5,3);
+        gCrystalEnd();
+      }
+    }
+
+    // ---- 투구 ----
+    const hx = T==='brute' ? 7 : 0, hy = T==='brute' ? -56 : -62;
     ctx.fillStyle = steel;
-    ctx.beginPath(); ctx.arc(0,-62,9,Math.PI*0.05,Math.PI*1.95); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='#e8823a';
-    ctx.fillRect(-4,-1,8,2);
+    ctx.beginPath(); ctx.arc(hx,hy,9,Math.PI*0.05,Math.PI*1.95); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = T==='crystal' ? '#e8823a' : '#b48cff';
+    ctx.fillRect(hx+1,hy-1,7,2);
 
+    // 1. 갑주에 돋아난 보랏빛 결정 4개
+    if(T==='crystal'){
+      gCrystalStyle();
+      gCrystal(-7,-55,-2.3,11,5);
+      gCrystal(-10,-43,-2.9,9,4.5);
+      gCrystal(5,-46,-0.6,8,4);
+      gCrystal(-3,-69,-1.9,8,4);
+      gCrystalEnd();
+    }
     ctx.restore();
+  }
+
+  function drawArcherAims(){
+    for(const g of grunts){
+      if(g.type!=='archer' || g.state!=='telegraph' || g.dormant) continue;
+      const p = clamp(g.stateTime/ARCHER_TELE,0,1), locked = p>=0.7;
+      const ox = g.x + g.facing*16 - camera.x, oy = g.y - g.h*0.62;
+      ctx.save();
+      ctx.strokeStyle = 'rgba('+DANGER_COLOR+','+(locked ? 0.75 : 0.2+0.3*p)+')';
+      ctx.lineWidth = locked ? 2 : 1.5;
+      if(!locked) ctx.setLineDash([6,6]);
+      ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+Math.cos(g.aim)*ARROW_RANGE, oy+Math.sin(g.aim)*ARROW_RANGE); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  function drawArrows(){
+    for(const a of arrows){
+      ctx.save();
+      ctx.translate(a.x-camera.x, a.y); ctx.rotate(a.ang);
+      ctx.lineCap='round';
+      ctx.strokeStyle='#cfc6b8'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(-20,0); ctx.lineTo(0,0); ctx.stroke();
+      ctx.strokeStyle='#8fa6c4'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(-20,0); ctx.lineTo(-25,-4); ctx.moveTo(-20,0); ctx.lineTo(-25,4); ctx.stroke();
+      gCrystalStyle(); gCrystal(-1,0,0,8,4.5); gCrystalEnd();
+      ctx.restore();
+    }
   }
 
   function drawGruntHpBar(g){
@@ -3615,7 +4303,65 @@
 
   // ---------- 수문장 렌더링 ----------
   // 검은 풀 플레이트 + 보랏빛으로 빛나는 가시 + 츠바이핸더 (아트 좌표는 키 약 170 기준, S로 축소)
+  let mbSpikeK = 1;   // 처치 연출에서 결정(가시)이 자라는 배율
+  const MB_GEMS = [
+    [0,-150,1.0,-1.57], [-18,-125,0.9,-2.25], [20,-122,0.95,-0.85], [-26,-96,0.85,-2.75], [24,-92,0.9,-0.35],
+    [0,-102,1.25,-1.6], [-16,-62,0.9,-2.5], [17,-58,0.9,-0.6], [0,-38,1.0,-1.57], [-15,-18,0.8,-2.85],
+    [15,-16,0.8,-0.3], [0,-178,0.75,-1.57], [-30,-140,0.7,-2.0], [30,-140,0.7,-1.1],
+  ];
+  function drawGemMass(k, t){
+    ctx.save();
+    const solid = clamp((t - (MB_D_GROW-0.25))/0.35, 0, 1);
+    if(solid>0){
+      ctx.globalAlpha = solid;
+      const v = [[0,-205],[40,-165],[50,-100],[40,-32],[22,4],[-22,4],[-42,-36],[-52,-104],[-38,-168]];
+      ctx.beginPath();
+      v.forEach((p,i)=> i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]));
+      ctx.closePath();
+      const gg = ctx.createLinearGradient(-50,-200,50,0);
+      gg.addColorStop(0,'#cdb2ff'); gg.addColorStop(0.45,'#7d4ee0'); gg.addColorStop(1,'#3b1d80');
+      ctx.fillStyle = gg;
+      ctx.shadowColor = '#9b6bff'; ctx.shadowBlur = 24;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#efe4ff'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.strokeStyle = 'rgba(240,228,255,0.5)'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for(const p of v){ ctx.moveTo(-6,-110); ctx.lineTo(p[0],p[1]); }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.beginPath(); ctx.moveTo(-34,-160); ctx.lineTo(-10,-190); ctx.lineTo(-14,-150); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.shadowColor = '#9b6bff'; ctx.shadowBlur = 14;
+    for(let i=0;i<MB_GEMS.length;i++){
+      const g = MB_GEMS[i];
+      const gk = clamp(k*1.5 - i*0.04, 0, 1);
+      if(gk<=0) continue;
+      const L = 40*g[2]*gk, Wd = L*0.5, c = Math.cos(g[3]), sn = Math.sin(g[3]);
+      const px = -sn*Wd/2, py = c*Wd/2;
+      ctx.beginPath();
+      ctx.moveTo(g[0]-c*L*0.35, g[1]-sn*L*0.35);
+      ctx.lineTo(g[0]+px, g[1]+py);
+      ctx.lineTo(g[0]+c*L, g[1]+sn*L);
+      ctx.lineTo(g[0]-px, g[1]-py);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(170,120,255,0.92)'; ctx.fill();
+      ctx.strokeStyle = '#efe4ff'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    // 깨지기 직전 하얗게 달아오른다
+    const white = clamp((t - (MB_D_SHATTER-0.3))/0.3, 0, 1);
+    if(white>0){
+      ctx.globalAlpha = white*0.75;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(0,-100,58,112,0,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function mbSpike(x,y,ang,len,base){
+    len *= mbSpikeK; base *= mbSpikeK;
     const c=Math.cos(ang), s=Math.sin(ang), px=-s*base/2, py=c*base/2;
     ctx.beginPath();
     ctx.moveTo(x+px,y+py);
@@ -3626,7 +4372,7 @@
     ctx.stroke();
   }
 
-  function drawZweihander(hx, hy, th, p2, glow, glowA){
+  function drawZweihander(hx, hy, th, p2, glow, glowA, glowRgb){
     ctx.save();
     ctx.translate(hx,hy);
     ctx.rotate(th);
@@ -3652,7 +4398,7 @@
     ctx.fill();
     if(p2){
       ctx.shadowColor = glow; ctx.shadowBlur = 12;
-      ctx.strokeStyle = 'rgba(200,160,255,'+glowA+')';
+      ctx.strokeStyle = 'rgba('+glowRgb+','+glowA+')';
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.shadowBlur = 0;
@@ -3664,7 +4410,7 @@
 
   function drawMidboss(){
     const mb = midboss;
-    if(mb.state==='dead' && mb.stateTime>1.0) return;
+    if(mb.state==='dead' && mb.stateTime>=MB_D_SHATTER) return;
     const S = 0.5;
     const now = performance.now();
     const pulse = 0.5+0.5*Math.sin(now/220);
@@ -3673,7 +4419,8 @@
 
     ctx.save();
     ctx.translate(mb.x-camera.x, mb.y);
-    const deathT = st==='dead' ? clamp(t/1.0,0,1) : 0;
+    const deathT = 0;
+    mbSpikeK = st==='dead' ? 1 + 1.7*clamp((t-MB_D_GLOW)/(MB_D_GROW-MB_D_GLOW),0,1) : 1;
     ctx.globalAlpha = 1-deathT;
 
     // 그림자
@@ -3692,25 +4439,25 @@
 
     // 피격 섬광: 캔버스 필터는 도형마다 연산이 돌아 매우 느리므로, 밝은 색으로 바꿔 그리고 빛번짐을 끈다
     const flash = mb.flashTime>0;
+    const gi = mbGlowInfo();
+    const glow = gi.pal.hex, glowA = gi.a, grgb = gi.pal.rgb, glowOn = gi.a>0.05;
 
     // 2페이즈: 몸 전체를 감싸는 보랏빛 기운
-    if(p2 && st!=='dead'){
+    if(p2 && st!=='dead' && st!=='p2trans'){
       const ag = ctx.createRadialGradient(0,-90,10,0,-90,130);
-      ag.addColorStop(0,'rgba(140,90,255,'+(0.22+0.12*pulse)+')');
-      ag.addColorStop(1,'rgba(140,90,255,0)');
+      ag.addColorStop(0,'rgba('+grgb+','+(0.18+0.1*pulse)+')');
+      ag.addColorStop(1,'rgba('+grgb+',0)');
       ctx.fillStyle=ag;
       ctx.beginPath(); ctx.arc(0,-90,130,0,Math.PI*2); ctx.fill();
     }
 
     const plate = flash ? '#e6e2ec' : '#18141e', plateDark = flash ? '#cfc9d8' : '#0d0a12', edge = flash ? '#ffffff' : '#3a3046';
-    const glow = p2 ? '#c9a2ff' : '#9b6bff';
-    const glowA = p2 ? 0.75+0.25*pulse : 0.45+0.25*pulse;
     const spikeStyle = ()=>{
-      ctx.fillStyle = flash ? '#f2eef8' : '#0a0810';
-      ctx.strokeStyle='rgba(180,140,255,'+glowA+')';
+      ctx.fillStyle = flash ? '#f2eef8' : (glowOn ? 'rgba('+grgb+','+(0.3+0.5*glowA)+')' : '#15121b');
+      ctx.strokeStyle = glowOn ? 'rgba('+grgb+','+(0.45+0.55*glowA)+')' : '#2c2735';
       ctx.lineWidth=2;
       ctx.shadowColor=glow;
-      ctx.shadowBlur = flash ? 0 : (p2 ? 14 : 8);
+      ctx.shadowBlur = (flash || !glowOn) ? 0 : 5+10*glowA;
     };
     const noGlow = ()=>{ ctx.shadowBlur=0; };
 
@@ -3774,11 +4521,11 @@
     ctx.beginPath(); ctx.roundRect(-27,-124,54,60,10); ctx.fill();
     ctx.strokeStyle = edge; ctx.lineWidth = 2; ctx.stroke();
     ctx.save();
-    ctx.shadowColor = glow; ctx.shadowBlur = flash ? 0 : (8);
-    ctx.strokeStyle = 'rgba(180,140,255,'+(glowA*0.7)+')';
+    ctx.shadowColor = glow; ctx.shadowBlur = (flash||!glowOn) ? 0 : 8;
+    ctx.strokeStyle = 'rgba('+grgb+','+(glowA*0.7)+')';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(6,-120); ctx.lineTo(11,-96); ctx.lineTo(4,-82); ctx.lineTo(8,-68); ctx.stroke();
-    ctx.fillStyle = 'rgba(200,160,255,'+glowA+')';
+    ctx.fillStyle = 'rgba('+grgb+','+glowA+')';
     ctx.beginPath(); ctx.arc(10,-100,4,0,Math.PI*2); ctx.fill();
     ctx.restore();
 
@@ -3786,8 +4533,8 @@
     ctx.fillStyle = '#08060b';
     ctx.fillRect(-27,-68,54,6);
     ctx.save();
-    ctx.shadowColor = glow; ctx.shadowBlur = flash ? 0 : (8);
-    ctx.fillStyle = glow;
+    ctx.shadowColor = glow; ctx.shadowBlur = (flash||!glowOn) ? 0 : 8;
+    ctx.fillStyle = glowOn ? glow : '#2c2735';
     ctx.beginPath(); ctx.arc(8,-65,3,0,Math.PI*2); ctx.fill();
     ctx.restore();
 
@@ -3812,7 +4559,7 @@
     ctx.lineCap='round';
     ctx.strokeStyle = plateDark; ctx.lineWidth = 10;
     ctx.beginPath(); ctx.moveTo(-22,-110); ctx.lineTo(grabbing?hx:h2x, grabbing?hy:h2y); ctx.stroke();
-    drawZweihander(hx, hy, th, p2 && !flash, glow, glowA);
+    drawZweihander(hx, hy, th, p2 && !flash && glowOn, glow, glowA, grgb);
     ctx.fillStyle = plateDark;
     ctx.beginPath(); ctx.arc(grabbing?hx:h2x, grabbing?hy:h2y, 6, 0, Math.PI*2); ctx.fill();
     if(!grabbing){
@@ -3845,8 +4592,8 @@
     ctx.beginPath(); ctx.roundRect(-17,-172,34,38,9); ctx.fill();
     ctx.strokeStyle = edge; ctx.lineWidth = 2; ctx.stroke();
     ctx.save();
-    ctx.shadowColor = glow; ctx.shadowBlur = flash ? 0 : (p2 ? 16 : 10);
-    ctx.fillStyle = 'rgba(205,170,255,'+(0.6+0.4*pulse)+')';
+    ctx.shadowColor = glow; ctx.shadowBlur = (flash||!glowOn) ? 0 : (p2 ? 16 : 10);
+    ctx.fillStyle = 'rgba('+grgb+','+(glowOn ? 0.55+0.45*glowA : 0.1)+')';
     ctx.fillRect(0,-158,17,3);
     ctx.restore();
     spikeStyle();
@@ -3857,11 +4604,15 @@
     noGlow();
     ctx.restore();
 
+    // 처치: 결정이 자라나 몸 전체가 보석 덩어리가 된다
+    if(st==='dead' && t>MB_D_GLOW) drawGemMass(clamp((t-MB_D_GLOW)/(MB_D_GROW-MB_D_GLOW),0,1), t);
+    mbSpikeK = 1;
+
     // 베기 궤적
     if(mb.swingFx>0){
       ctx.save();
       ctx.globalAlpha = (1-deathT)*clamp(mb.swingFx/0.15,0,1)*0.7;
-      ctx.strokeStyle = p2 ? '#e3d0ff' : '#eef1f4';
+      ctx.strokeStyle = p2 ? MB_RED.pale : '#eef1f4';
       ctx.lineWidth = 8;
       ctx.beginPath(); ctx.arc(0,-80,170,-1.1,0.45); ctx.stroke();
       ctx.restore();
@@ -3879,13 +4630,13 @@
       const cx = MB_FX_W/2 - R0;
       ctx.globalAlpha = 0.4;
       ctx.lineWidth = MB_FX_W*0.9;
-      ctx.strokeStyle = '#9b6bff';
+      ctx.strokeStyle = b.pal.hex;
       ctx.beginPath();
       ctx.arc(cx,0,R0-MB_FX_W*0.45,-BLADE_FX_ARC*0.92,BLADE_FX_ARC*0.92);
       ctx.stroke();
       ctx.globalAlpha = 0.95;
       ctx.lineWidth = 4;
-      ctx.strokeStyle = '#efe2ff';
+      ctx.strokeStyle = b.pal.pale;
       ctx.beginPath();
       ctx.arc(cx,0,R0,-BLADE_FX_ARC,BLADE_FX_ARC);
       ctx.stroke();
@@ -3921,7 +4672,7 @@
       ctx.save();
       ctx.globalAlpha = alpha;
       const pg = ctx.createLinearGradient(cx-12,0,cx+12,0);
-      pg.addColorStop(0,'#120f0e'); pg.addColorStop(0.5,'#26201d'); pg.addColorStop(1,'#120f0e');
+      pg.addColorStop(0,'#151b27'); pg.addColorStop(0.5,'#33405a'); pg.addColorStop(1,'#151b27');
       ctx.fillStyle = pg;
       ctx.fillRect(cx-12, y+16, 24, GROUND_Y-(y+16));
       ctx.restore();
@@ -3945,14 +4696,17 @@
       ctx.save();
       ctx.globalAlpha = p.regen<1 ? p.regen : 1;
       const grad = ctx.createLinearGradient(0,y,0,y+18);
-      grad.addColorStop(0,'#2d2724'); grad.addColorStop(1,'#141110');
+      grad.addColorStop(0,'#3d465a'); grad.addColorStop(1,'#1a2030');
       ctx.fillStyle = grad;
       ctx.fillRect(sx1, y, w, 18);
-      ctx.strokeStyle = enraged ? 'rgba(217,42,38,0.45)' : 'rgba(216,180,99,0.4)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(sx1,y+0.5); ctx.lineTo(sx1+w,y+0.5); ctx.stroke();
+      ctx.fillStyle = 'rgba(185,218,246,0.6)';
+      for(let ix=sx1+8; ix<sx1+w-6; ix+=14){
+        const ih = 4 + snowHash(Math.round(ix+camera.x))*8;
+        ctx.beginPath(); ctx.moveTo(ix-2.5,y+18); ctx.lineTo(ix+2.5,y+18); ctx.lineTo(ix,y+18+ih); ctx.closePath(); ctx.fill();
+      }
+      drawSnowCap(p.x1, p.x2, y, 4);
       ctx.restore();
-      if(p.rise<1 && Math.random()<0.3) spawnParticles(p.x1+Math.random()*w, GROUND_Y-2, '#6b625c', 1,1,60,0.4);
+      if(p.rise<1 && Math.random()<0.3) spawnParticles(p.x1+Math.random()*w, GROUND_Y-2, '#dbe8f5', 1,1,60,0.4);
     }
   }
 
@@ -4253,7 +5007,7 @@
     else if(st==='dive_land'){ hx = 30; hy = -60; sa = Math.PI/2 - 0.2; crouch = 14; }
     else if(st==='transform'){
       if(t < TR_SPLIT+0.6){ hx = 16; hy = -146; sa = -1.75; }
-      headUp = 14*clamp((t-TR_SPLIT-0.5)/0.5,0,1);
+      headUp = 16*trRoar(t);
     }
     if(boss.swingFx>0){
       if(boss.swingKind==='front' || boss.swingKind==='big'){ hx = 52; hy = -78; sa = 0.55; crouch = 6; }
@@ -4341,7 +5095,7 @@
     ctx.lineTo(16,8); ctx.lineTo(-6,10); ctx.lineTo(-12,0);
     ctx.closePath(); ctx.fill(); ctx.stroke();
     // 아래턱 (포효하면 벌어진다)
-    const jaw = st==='transform' ? 0.35*clamp((t-TR_SPLIT-0.5)/0.4,0,1) : (tele ? 0.12 : 0);
+    const jaw = st==='transform' ? 0.45*trRoar(t) : (tele ? 0.12 : 0);
     ctx.save();
     ctx.translate(-4,8); ctx.rotate(jaw);
     ctx.fillStyle = plateDk;
@@ -4487,12 +5241,14 @@
     if(stageIndex===0){
       drawGroundDebris();
       drawPlatforms();
+      drawArcherAims();
       for(const g of grunts) drawGrunt(g);
       drawMidbossTelegraphs();
       drawMidboss();
       drawPlayer();
       for(const g of grunts) drawGruntHpBar(g);
       drawMbBlades();
+      drawArrows();
     } else {
       drawBossPlatforms();
       drawBossTelegraphs();
@@ -4503,6 +5259,7 @@
     }
     drawParticles();
     drawFloatTexts();
+    drawSnowfall();
     if(stageIndex===1){ drawTransformOverlay(); drawBossDeathFx(); }
     if(deathSeq){
       // 플레이어를 제외한 화면이 검게 변한다
@@ -4543,19 +5300,42 @@
   function drawTransformScene(){
     const t = boss.stateTime, f = boss.facing;
     const bx = boss.x - camera.x, by = boss.y;
+    if(bossPlatformsUp) drawBossPlatforms();
     if(t < TR_SPLIT){
-      drawSheepKnight({shake: t<TR_SWORD ? 2 : 5});
-      if(t > TR_SWORD){
-        // 등 뒤에서 대검이 살을 찢고 솟아오른다
-        const k = clamp((t-TR_SWORD)/(TR_SPLIT-TR_SWORD),0,1), e = 1-(1-k)*(1-k);
+      drawSheepKnight({shake: t<TR_SWORD ? 2 : (t<TR_ARM ? 0 : 7)});
+      if(t >= TR_SWORD){
+        // 등 뒤에서 대검이 한번에 살을 찢고 튀어나온다
         ctx.save();
         ctx.translate(bx - f*5, by - P1_H*0.55);
         ctx.scale(f*0.5, 0.5);
         ctx.rotate(-2.25);
         ctx.beginPath(); ctx.rect(0,-60,400,120); ctx.clip();
-        drawSlabSword(-156 + e*156, 0, 0, false);
+        drawSlabSword(0, 0, 0, false);
         ctx.restore();
       }
+      if(t >= TR_ARM){
+        // 흑랑의 팔이 가슴을 뚫고 튀어나온다
+        const k = clamp((t-TR_ARM)/0.06,0,1);
+        ctx.save();
+        ctx.translate(bx + f*3, by - P1_H*0.6);
+        ctx.scale(f, 1);
+        ctx.rotate(-0.45);
+        ctx.strokeStyle = '#000'; ctx.fillStyle = '#000'; ctx.lineCap = 'round';
+        ctx.lineWidth = 7;
+        ctx.beginPath(); ctx.moveTo(-2,0); ctx.lineTo(20*k,0); ctx.stroke();
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(20*k,0); ctx.lineTo(32*k,-9*k); ctx.stroke();
+        for(const c of [-0.7,0,0.7]){
+          const cx = 32*k, cy = -9*k, a = -0.6+c;
+          ctx.beginPath();
+          ctx.moveTo(cx+Math.cos(a-1.4)*2, cy+Math.sin(a-1.4)*2);
+          ctx.lineTo(cx+Math.cos(a)*9*k, cy+Math.sin(a)*9*k);
+          ctx.lineTo(cx+Math.cos(a+1.4)*2, cy+Math.sin(a+1.4)*2);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      }
+      drawTrBlood();
       return;
     }
     const k = clamp((t-TR_SPLIT)/0.75,0,1), e = 1-(1-k)*(1-k);
@@ -4581,6 +5361,12 @@
     ctx.translate(-bx, -by);
     drawWolfKnight();
     ctx.restore();
+    drawTrBlood();
+  }
+  function drawTransformAfter(){
+    drawBossPlatforms();
+    drawWolfKnight();
+    drawTrBlood();
   }
 
   function drawTransformOverlay(){
@@ -4598,7 +5384,7 @@
     ctx.fillStyle = '#000';
     ctx.fillRect(-30, GROUND_Y, W+60, H-GROUND_Y+30);
     ctx.restore();
-    drawSilhouette(t < TR_FADE ? drawTransformScene : drawWolfKnight, '#000', a);
+    drawSilhouette(t < TR_FADE ? drawTransformScene : drawTransformAfter, '#000', a);
   }
 
   // 처치 후: 쓰러진 몸이 붉게 물들고, 가루가 되어 흩어진다
@@ -4630,6 +5416,13 @@
         // 수문장의 방: 상단 바가 수문장의 체력바가 된다
         bossBarEl.style.width = clamp(midboss.hp/midboss.maxHp*100,0,100)+'%';
         bossNameEl.textContent = midboss.phase===2 ? '수문장 — 깨어난 가시 기사' : '수문장 — 가시 갑주의 기사';
+      } else if(zoneState.some(z=>z.state==='locked')){
+        const zi = zoneState.findIndex(z=>z.state==='locked');
+        const group = grunts.filter(g=>g.zone===zi);
+        const total = group.reduce((a,g)=>a+g.maxHp,0);
+        const remain = group.reduce((a,g)=>a+g.hp,0);
+        bossBarEl.style.width = (total>0 ? clamp(remain/total*100,0,100) : 0)+'%';
+        bossNameEl.textContent = LOCK_ZONES[zi].name+' · 기사 '+group.filter(g=>g.state!=='dead').length+'명 남음';
       } else {
         const group = grunts.filter(g=>!g.arena);
         const total = group.reduce((s,g)=>s+g.maxHp,0);
@@ -4645,7 +5438,7 @@
       if(boss.state==='transform'){
         // 변신: 1페이즈 바가 비고, 2페이즈 체력 800이 차오른다
         if(boss.phase===1) shown = 0;
-        else shown = P2_HP*clamp((boss.stateTime-TR_FADE)/PLAT_RISE,0,1);
+        else shown = P2_HP*clamp((boss.stateTime-TR_ROAR)/PLAT_RISE,0,1);
       }
       bossBarEl.style.width = clamp(shown/max*100,0,100)+'%';
     }
@@ -4665,6 +5458,18 @@
       shake = 0;
       return;
     }
+    // 수문장 2페이즈 전환: 게임 전체가 잠깐 멈춘다
+    if(stageIndex===0 && midboss.state==='p2trans'){
+      midboss.stateTime += dt;
+      if(midboss.stateTime >= MB_TR_END){
+        midboss.state='roar'; midboss.stateTime=0;
+        showBanner('수문장 각성!', 400);
+        addShake(14);
+        spawnParticles(midboss.x, midboss.y-midboss.h*0.6, MB_RED.hex, 34,1,200,1.0);
+      }
+      updateHudBars();
+      return;
+    }
     // 변신 연출 중 (붉은 화면) 엔 플레이어가 멈춘다
     if(!(stageIndex===1 && boss.state==='transform' && boss.stateTime<TR_FADE)) updatePlayer(dt);
 
@@ -4672,6 +5477,8 @@
       for(const g of grunts) updateGrunt(g, dt);
       updateMidboss(dt);
       updateMbProjectiles(dt);
+      updateArrows(dt);
+      updateLockZones(dt);
 
       // 입구 문: 수문장의 방 밖의 기사를 모두 쓰러뜨리면 열린다
       if(!gateOpen && grunts.every(g=>g.arena || g.state==='dead')){
@@ -4691,7 +5498,7 @@
         }
       }
       // 출구 문: 수문장을 쓰러뜨리면 열린다
-      if(arenaSealed && !exitOpen && midboss.state==='dead' && midboss.stateTime>0.8){
+      if(arenaSealed && !exitOpen && midboss.state==='dead' && midboss.stateTime>MB_D_SHATTER+0.5){
         exitOpen = true;
         spawnParticles(TUTORIAL_LEVEL_WIDTH-WALL_THICKNESS, GROUND_Y-40, '#d8b463', 16,1,120,0.5);
       }
@@ -5156,7 +5963,7 @@
       rows += ctlRow(moveName+' 아래로', '발판 하강', '발판 위에서 아래로 내려간다');
     }
     rows += ctlRow('공격 버튼 (큰 원)', '공격', '');
-    rows += ctlRow('찌르기 버튼', '찌르기', '1초간 누르고 있으면 강찌르기 · 테두리 링이 차오르면 강찌르기 준비 완료');
+    rows += ctlRow('찌르기 버튼', '찌르기', '0.5초간 누르고 있으면 강찌르기 · 테두리 링이 차오르면 강찌르기 준비 완료');
     rows += ctlRow('3단 베기 버튼', '3단 베기', '버튼이 어두워지고 남은 쿨타임이 숫자로 표시된다');
     rows += ctlRow('회피 버튼', '회피 구르기', '기력이 모자라면 버튼이 흐려진다');
     rows += ctlRow('일시정지 버튼 (우측 상단)', '일시정지', '조작 키 편집 · 다시하기 · 처음 화면');
