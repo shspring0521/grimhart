@@ -522,7 +522,7 @@
   const GRUNT_SPEED = 130;
   const BRUTE_DAMAGE = 15;
   const ARCHER_TELE = 0.7;
-  const ARROW_SPEED = 560, ARROW_RANGE = 820;
+  const ARROW_SPEED = 560, ARROW_RANGE = 520, ARCHER_SHOOT_RANGE = 440;
 
   const GRAVITY = 1700;
   const JUMP_VELOCITY = -700;
@@ -1558,6 +1558,13 @@
 
     const dx = player.x - g.x;
     const dist = Math.abs(dx);
+    // 전투 구역이 잠겨 있으면 구역 밖의 기사는 플레이어를 노리지 않는다 (얼음벽 너머)
+    const lzi = zoneState.findIndex(z=>z.state==='locked');
+    if(lzi>=0 && g.zone!==lzi){
+      if(g.state==='telegraph'){ g.state='idle'; g.stateTime=0; }
+      g.moving = false;
+      return;
+    }
     if(g.type==='archer'){ updateArcher(g, dt, dx, dist); return; }
     g.facing = dx<0? -1:1;
 
@@ -1621,7 +1628,7 @@
       g.moving = Math.abs(nx-g.x) > 0.01;
       g.x = nx;
     }
-    if(dist<560 && g.stateTime>0.9){
+    if(dist<ARCHER_SHOOT_RANGE && g.stateTime>0.9){
       g.state='telegraph'; g.stateTime=0;
       g.aim = archerAim(g).ang;
     }
@@ -1641,8 +1648,10 @@
         arrows.splice(i,1);
         continue;
       }
+      const lz = lockedZone();
+      const blocked = lz && (a.x < lz.x1+WALL_THICKNESS || a.x > lz.x2-WALL_THICKNESS);
       const gy = groundSegmentAt(a.x).y;
-      if(a.y >= gy || a.dist > ARROW_RANGE || a.x < 0 || a.x > TUTORIAL_LEVEL_WIDTH || a.y < -50){
+      if(blocked || a.y >= gy || a.dist > ARROW_RANGE || a.x < 0 || a.x > TUTORIAL_LEVEL_WIDTH || a.y < -50){
         spawnParticles(a.x, Math.min(a.y, gy-2), '#dbe8f5', 4,1,60,0.25);
         arrows.splice(i,1);
       }
@@ -2276,8 +2285,8 @@
   const DEBRIS_DMG = 3;
   let bossExitOpen = false;   // 2페이즈 보스를 쓰러뜨리면 오른쪽 벽이 열린다
   // 변신 연출 시간표
-  // 붉은 화면 → 대검이 한번에 튀어나옴(0.1초 정지) → 팔이 튀어나옴 → 반으로 찢고 등장 → 포효하며 발판 상승 → 화면 복귀
-  const TR_RED_IN = 0.35, TR_SWORD = 0.6, TR_ARM = 0.7, TR_SPLIT = 1.12, TR_ROAR = 1.85;
+  // 붉은 화면 → 대검이 한번에 튀어나옴(0.5초 대기) → 팔이 튀어나옴(0.5초 대기) → 반으로 찢고 등장 → 포효하며 발판 상승 → 화면 복귀
+  const TR_RED_IN = 0.35, TR_SWORD = 0.6, TR_ARM = TR_SWORD + 0.5, TR_SPLIT = TR_ARM + 0.5, TR_ROAR = TR_SPLIT + 0.73;
   const TR_FADE = TR_ROAR + PLAT_RISE, TR_FADE_LEN = 0.8, TR_END = TR_FADE + TR_FADE_LEN;
   let trBlood = [];   // 변신 연출의 검은 피 {x,y,vx,vy,r,landed}
   function trRoar(t){ return clamp((t-TR_ROAR)/0.25,0,1) * (1 - clamp((t-TR_FADE+0.15)/0.3,0,1)); }
@@ -2612,7 +2621,7 @@
       if(boss.phase===1){
         const cy = boss.y - P1_H*0.55;
         if(t>=TR_SWORD && !boss._trSword){
-          // 대검이 등을 뚫고 한번에 튀어나온다 - 그대로 0.1초 정지
+          // 대검이 등을 뚫고 한번에 튀어나온다 - 그대로 0.5초 정지
           boss._trSword = true;
           shake = 0;
           bloodBurst(boss.x - f*8, cy-6, -f*0.7, -1, 50, 560);
@@ -3881,7 +3890,7 @@
     const sw = running ? Math.sin(now/60)*5 : 0;
     const bob = running ? -Math.abs(Math.sin(now/60))*1.5 : 0;
     const navy='#1f2d78', navyDk='#121a4a', neck='#5468d4', neckDk='#3a4aa6';
-    const pants='#e2ddd1', pantsDk='#b9b3a5', plate='#959ca6', plateDk='#646b75', edge='#24272d';
+    const plate='#959ca6', plateDk='#646b75', edge='#24272d';
     ctx.lineJoin='round';
 
     // ---- 다리: 통바지 + 무릎 아래 판금 정강이 + 뾰족한 철화 ----
@@ -3897,21 +3906,25 @@
       ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle='rgba(30,32,38,0.6)';
       ctx.beginPath(); ctx.moveTo(ax+1,ay-2.5); ctx.lineTo(ax+1,ay+3); ctx.moveTo(ax+5,ay-0.5); ctx.lineTo(ax+5,ay+3); ctx.stroke();
-      ctx.fillStyle = pc; ctx.fillRect(kx-4.5, ky-2, 9, 5);
-      ctx.fillStyle = back ? pantsDk : pants; ctx.strokeStyle = edge; ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(hx-5,-31);
-      ctx.lineTo(hx+5,-31);
-      ctx.quadraticCurveTo(kx+11, (ky-31)/2, kx+5, ky);
-      ctx.lineTo(kx-6, ky);
-      ctx.quadraticCurveTo(kx-10, (ky-31)/2, hx-5, -31);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // 허벅지 판금 (퀴스)
+      ctx.strokeStyle = edge; ctx.lineWidth = 7.5;
+      ctx.beginPath(); ctx.moveTo(hx,-31); ctx.lineTo(kx,ky); ctx.stroke();
+      ctx.strokeStyle = pc; ctx.lineWidth = 5.5;
+      ctx.beginPath(); ctx.moveTo(hx,-31); ctx.lineTo(kx,ky); ctx.stroke();
+      ctx.strokeStyle = 'rgba(30,32,38,0.55)'; ctx.lineWidth = 1;
+      const mx = (hx+kx)/2, my = (-31+ky)/2;
+      ctx.beginPath(); ctx.moveTo(mx-3,my); ctx.lineTo(mx+3,my); ctx.stroke();
+      // 무릎 보호대
+      ctx.fillStyle = back ? plateDk : '#b3bac3'; ctx.strokeStyle = edge; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(kx+0.5, ky, 3.6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     };
     leg(-3, -sw, true);
     leg(4, sw, false);
 
     // 허리띠
-    ctx.fillStyle='#2c2a30'; ctx.fillRect(-9,-34+bob,18,4);
+    ctx.fillStyle=plateDk; ctx.strokeStyle=edge; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(-9,-35+bob); ctx.lineTo(9,-35+bob); ctx.lineTo(10,-29+bob); ctx.lineTo(-10,-29+bob); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#2c2a30'; ctx.fillRect(-9,-36+bob,18,2.5);
     // 뒤쪽 팔 (판금)
     ctx.strokeStyle=plateDk; ctx.lineWidth=5; ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(-6,-43+bob); ctx.lineTo(-11,-31+bob); ctx.stroke();
@@ -3927,10 +3940,6 @@
     ctx.lineTo(13,-42+bob); ctx.lineTo(12,-31+bob); ctx.lineTo(1,-27+bob);
     ctx.lineTo(-13+flut,-30+bob); ctx.lineTo(-14+flut,-42+bob);
     ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle='rgba(140,160,255,0.28)'; ctx.lineWidth=1;
-    ctx.beginPath();
-    for(let i=0;i<5;i++){ const sx=-9+i*5; ctx.moveTo(sx,-44+bob); ctx.lineTo(sx-2,-32+bob); }
-    ctx.stroke();
 
     // 자물쇠 투구
     const hb = -52+bob;
